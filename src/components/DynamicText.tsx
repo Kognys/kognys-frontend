@@ -6,12 +6,10 @@ const DynamicText = () => {
   const [isVisible, setIsVisible] = useState(true);
 
   const texts = [
+    "Students",
     "AI Researchers",
-    "Blockchain Developers",
-    "Crypto Enthusiasts",
-    "Knowledge Seekers",
-    "Innovation Leaders",
-    "Tech Pioneers"
+    "Blockchain Researchers",
+    "Crypto Degens"
   ];
 
   useEffect(() => {
