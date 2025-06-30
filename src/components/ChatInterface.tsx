@@ -60,64 +60,51 @@ const ChatInterface = () => {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto bg-card/80 backdrop-blur-lg rounded-2xl shadow-2xl border border-border/50 overflow-hidden">
-      {/* Header */}
-      <div className="bg-primary/10 px-6 py-4 border-b border-border/50">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-            <Bot className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">AI Knowledge Assistant</h3>
-            <p className="text-sm text-muted-foreground">Blockchain & AI Expert</p>
-          </div>
-        </div>
-      </div>
-
+    <div className="w-full max-w-xl mx-auto bg-card/30 backdrop-blur-md rounded-xl shadow-lg border border-border/30 overflow-hidden">
       {/* Messages */}
-      <ScrollArea className="h-80 px-6 py-4">
-        <div className="space-y-4">
+      <ScrollArea className="h-64 px-4 py-3">
+        <div className="space-y-3">
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex gap-3 ${
+              className={`flex gap-2 ${
                 message.sender === 'user' ? 'justify-end' : 'justify-start'
               }`}
             >
               {message.sender === 'bot' && (
-                <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <Bot className="w-4 h-4 text-primary" />
+                <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <Bot className="w-3 h-3 text-primary" />
                 </div>
               )}
               
               <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
                   message.sender === 'user'
                     ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-secondary-foreground'
+                    : 'bg-secondary/50 text-secondary-foreground'
                 }`}
               >
-                <p className="text-sm">{message.text}</p>
+                <p>{message.text}</p>
               </div>
 
               {message.sender === 'user' && (
-                <div className="w-8 h-8 bg-secondary/50 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <User className="w-4 h-4 text-foreground" />
+                <div className="w-6 h-6 bg-secondary/30 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <User className="w-3 h-3 text-foreground" />
                 </div>
               )}
             </div>
           ))}
           
           {isLoading && (
-            <div className="flex gap-3 justify-start">
-              <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                <Bot className="w-4 h-4 text-primary" />
+            <div className="flex gap-2 justify-start">
+              <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                <Bot className="w-3 h-3 text-primary" />
               </div>
-              <div className="bg-secondary text-secondary-foreground px-4 py-2 rounded-2xl">
+              <div className="bg-secondary/50 text-secondary-foreground px-3 py-2 rounded-lg">
                 <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
               </div>
             </div>
@@ -126,22 +113,23 @@ const ChatInterface = () => {
       </ScrollArea>
 
       {/* Input */}
-      <div className="px-6 py-4 border-t border-border/50">
+      <div className="px-4 py-3 border-t border-border/20">
         <div className="flex gap-2">
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Ask about blockchain or AI..."
-            className="flex-1 bg-input border-border/50 focus:border-primary"
+            className="flex-1 bg-input/50 border-border/30 focus:border-primary text-sm"
             disabled={isLoading}
           />
           <Button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || isLoading}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-3"
+            size="sm"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-3 h-3" />
           </Button>
         </div>
       </div>
