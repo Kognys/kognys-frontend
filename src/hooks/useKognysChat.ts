@@ -13,13 +13,11 @@ export function useKognysChat() {
   useEffect(() => {
     const initializeChat = async () => {
       try {
-        const id = await kognysChatService.createSession();
-        setSessionId(id);
-        setIsConnected(kognysChatService.getConnectionStatus());
-        toast.success('Connected to Kognys AI');
+        await kognysChatService.initializeConnection();
+        setIsConnected(true);
+        console.log('Kognys chat initialized, ready to send messages');
       } catch (error) {
         console.error('Failed to initialize chat:', error);
-        toast.error('Failed to connect to Kognys AI. Using offline mode.');
         setIsConnected(false);
       }
     };

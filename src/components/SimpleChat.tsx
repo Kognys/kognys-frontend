@@ -15,12 +15,12 @@ const SimpleChat = () => {
   useEffect(() => {
     const initializeChat = async () => {
       try {
-        await kognysChatService.createSession();
-        setIsConnected(kognysChatService.getConnectionStatus());
-        toast.success('Connected to Kognys AI');
+        await kognysChatService.initializeConnection();
+        setIsConnected(true);
+        console.log('Ready to send messages to Kognys API');
       } catch (error) {
         console.error('Failed to initialize chat:', error);
-        toast.error('Failed to connect to Kognys AI. Using offline mode.');
+        setIsConnected(false);
       }
     };
 
