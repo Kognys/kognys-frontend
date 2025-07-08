@@ -1,8 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { ChatSession, ChatMessage, StreamChunk } from '@/types/kognys';
 
-// Temporarily use localhost for testing - update when backend is ready
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'https://kognys-agents-production.up.railway.app';
 
 export class KognysChatService {
   private socket: Socket | null = null;
@@ -39,6 +38,9 @@ export class KognysChatService {
 
   async createSession(): Promise<string> {
     try {
+      console.log('Attempting to create session...');
+      
+      // First, let's check what endpoints are available
       const response = await fetch(`${BASE_URL}/api/chat/session`, {
         method: 'POST',
         headers: {
@@ -49,8 +51,14 @@ export class KognysChatService {
         }),
       });
 
+      console.log('Session response status:', response.status);
+      console.log('Session response headers:', response.headers);
+
       if (!response.ok) {
-        throw new Error(`Failed to create session: ${response.statusText}`);
+        // Log the actual response to see what's available
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
+        throw new Error(`API endpoint not available: ${response.status} - ${errorText}`);
       }
 
       const session: ChatSession = await response.json();
