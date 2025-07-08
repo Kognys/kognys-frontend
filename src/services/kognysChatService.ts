@@ -1,7 +1,8 @@
 import { io, Socket } from 'socket.io-client';
 import { ChatSession, ChatMessage, StreamChunk } from '@/types/kognys';
 
-const BASE_URL = 'https://kognys-agents-production.up.railway.app';
+// Temporarily use localhost for testing - update when backend is ready
+const BASE_URL = 'http://localhost:3000';
 
 export class KognysChatService {
   private socket: Socket | null = null;
