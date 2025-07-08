@@ -11,27 +11,14 @@ export function useKognysChat() {
   const [currentStreamContent, setCurrentStreamContent] = useState('');
 
   useEffect(() => {
-    const initializeChat = async () => {
-      try {
-        const id = await kognysChatService.createSession();
-        setSessionId(id);
-        setIsConnected(kognysChatService.getConnectionStatus());
-        toast.success('Connected to Kognys AI');
-      } catch (error) {
-        console.error('Failed to initialize chat:', error);
-        toast.error('Failed to connect to Kognys AI. Using offline mode.');
-        setIsConnected(false);
-      }
-    };
-
-    initializeChat();
-
+    setIsConnected(kognysChatService.getConnectionStatus());
+    
     return () => {
       kognysChatService.disconnect();
     };
   }, []);
 
-  const sendMessage = useCallback((content: string) => {
+  const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
 
     const userMessage: ChatMessage = {
@@ -45,39 +32,39 @@ export function useKognysChat() {
     setIsLoading(true);
     setCurrentStreamContent('');
 
-    if (!isConnected) {
-      // Fallback for offline mode
-      setTimeout(() => {
-        const botMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: "I'm currently in offline mode. Please check your connection to access the full Kognys AI capabilities.",
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, botMessage]);
-        setIsLoading(false);
-      }, 1500);
-      return;
-    }
-
-    kognysChatService.sendMessage(
-      content,
-      (chunk) => {
-        setCurrentStreamContent(prev => prev + chunk.content);
-      },
-      (response) => {
-        setMessages(prev => [...prev, response]);
-        setCurrentStreamContent('');
-        setIsLoading(false);
-      },
-      (error) => {
-        console.error('Chat error:', error);
-        toast.error('Failed to send message. Please try again.');
-        setIsLoading(false);
-        setCurrentStreamContent('');
+    try {
+      // 1. Primeiro cria a sessão se não existir
+      let currentSessionId = sessionId;
+      if (!currentSessionId) {
+        currentSessionId = await kognysChatService.createSession();
+        setSessionId(currentSessionId);
       }
-    );
-  }, [isConnected]);
+
+      // 2. Envia a mensagem com o sessionId
+      kognysChatService.sendMessage(
+        content,
+        (chunk) => {
+          setCurrentStreamContent(prev => prev + chunk.content);
+        },
+        (response) => {
+          setMessages(prev => [...prev, response]);
+          setCurrentStreamContent('');
+          setIsLoading(false);
+        },
+        (error) => {
+          console.error('Chat error:', error);
+          toast.error('Failed to send message. Please try again.');
+          setIsLoading(false);
+          setCurrentStreamContent('');
+        }
+      );
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      toast.error('Failed to send message. Please try again.');
+      setIsLoading(false);
+      setCurrentStreamContent('');
+    }
+  }, [sessionId]);
 
   const stopGeneration = useCallback(() => {
     setIsLoading(false);
