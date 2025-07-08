@@ -38,31 +38,52 @@ export class KognysChatService {
 
   async createSession(): Promise<string> {
     try {
-      console.log('Attempting to create session...');
+      console.log('Creating chat session...');
       
-      // First, let's check what endpoints are available
-      const response = await fetch(`${BASE_URL}/api/chat/session`, {
+      // First create the chat POST
+      const chatResponse = await fetch(`${BASE_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          message: 'Initialize session',
           preferences: { language: 'en' }
         }),
       });
 
-      console.log('Session response status:', response.status);
-      console.log('Session response headers:', response.headers);
+      console.log('Chat POST response status:', chatResponse.status);
 
-      if (!response.ok) {
-        // Log the actual response to see what's available
-        const errorText = await response.text();
-        console.log('Error response:', errorText);
-        throw new Error(`API endpoint not available: ${response.status} - ${errorText}`);
+      if (!chatResponse.ok) {
+        const errorText = await chatResponse.text();
+        console.log('Chat POST error response:', errorText);
+        throw new Error(`Failed to create chat: ${chatResponse.status} - ${errorText}`);
       }
 
-      const session: ChatSession = await response.json();
-      this.sessionId = session.sessionId;
+      const chatResult = await chatResponse.json();
+      console.log('Chat POST result:', chatResult);
+      
+      // Extract session ID from the response
+      this.sessionId = chatResult.sessionId || Date.now().toString();
+
+      // Now try to create/get the session
+      const sessionResponse = await fetch(`${BASE_URL}/api/chat/session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId: this.sessionId,
+          preferences: { language: 'en' }
+        }),
+      });
+
+      console.log('Session response status:', sessionResponse.status);
+
+      if (sessionResponse.ok) {
+        const session = await sessionResponse.json();
+        this.sessionId = session.sessionId || this.sessionId;
+      }
 
       // Join the session room
       if (this.socket && this.isConnected) {
