@@ -13,14 +13,25 @@ const SimpleChat = () => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    setIsConnected(kognysChatService.getConnectionStatus());
-    
+    const initializeChat = async () => {
+      try {
+        await kognysChatService.createSession();
+        setIsConnected(kognysChatService.getConnectionStatus());
+        toast.success('Connected to Kognys AI');
+      } catch (error) {
+        console.error('Failed to initialize chat:', error);
+        toast.error('Failed to connect to Kognys AI. Using offline mode.');
+      }
+    };
+
+    initializeChat();
+
     return () => {
       kognysChatService.disconnect();
     };
   }, []);
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!value.trim()) return;
     
     const userMessage: ChatMessage = {
@@ -37,34 +48,38 @@ const SimpleChat = () => {
     const messageContent = value;
     setValue('');
 
-    try {
-      // 1. Primeiro cria a sessão
-      const sessionId = await kognysChatService.createSession();
-      
-      // 2. Envia a mensagem com o sessionId
-      kognysChatService.sendMessage(
-        messageContent,
-        (chunk) => {
-          setCurrentStreamContent(prev => prev + chunk.content);
-        },
-        (response) => {
-          setMessages(prev => [...prev, response]);
-          setCurrentStreamContent('');
-          setLoading(false);
-        },
-        (error) => {
-          console.error('Chat error:', error);
-          toast.error('Failed to send message. Please try again.');
-          setLoading(false);
-          setCurrentStreamContent('');
-        }
-      );
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      toast.error('Failed to send message. Please try again.');
-      setLoading(false);
-      setCurrentStreamContent('');
+    if (!isConnected) {
+      // Fallback simulation for offline mode
+      setTimeout(() => {
+        const botMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: "I'm currently in offline mode. Please check your connection to access the full Kognys AI capabilities.",
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, botMessage]);
+        setLoading(false);
+      }, 1500);
+      return;
     }
+
+    kognysChatService.sendMessage(
+      messageContent,
+      (chunk) => {
+        setCurrentStreamContent(prev => prev + chunk.content);
+      },
+      (response) => {
+        setMessages(prev => [...prev, response]);
+        setCurrentStreamContent('');
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Chat error:', error);
+        toast.error('Failed to send message. Please try again.');
+        setLoading(false);
+        setCurrentStreamContent('');
+      }
+    );
   };
 
   const handleStop = () => {
@@ -73,6 +88,14 @@ const SimpleChat = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
+      {/* Connection Status */}
+      {!isConnected && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-center">
+          <p className="text-yellow-200 text-sm">
+            ⚠️ Offline Mode - Limited functionality available
+          </p>
+        </div>
+      )}
 
       {/* Messages Display */}
       {messages.length > 0 && (
@@ -128,7 +151,7 @@ const SimpleChat = () => {
         className="bg-card/30 backdrop-blur-md border-border/30"
       >
         <ChatInputTextArea 
-          placeholder="Ask about blockchain or AI..."
+          placeholder={isConnected ? "Ask about blockchain or AI..." : "Ask a question (offline mode)..."}
           className="text-foreground placeholder:text-muted-foreground"
         />
         <ChatInputSubmit />
