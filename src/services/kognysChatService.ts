@@ -36,74 +36,85 @@ export class KognysChatService {
     });
   }
 
-  async initializeConnection(): Promise<void> {
-    // Just initialize the socket connection, don't create session yet
-    return new Promise((resolve) => {
-      if (this.socket && this.isConnected) {
-        resolve();
-        return;
-      }
-      
-      this.socket?.on('connect', () => {
-        console.log('Socket connected, ready to send messages');
-        resolve();
-      });
-    });
-  }
-
-  async sendMessage(
-    message: string,
-    onStreamChunk: (chunk: { content: string }) => void,
-    onComplete: (response: ChatMessage) => void,
-    onError: (error: Error) => void
-  ) {
+  async createSession(): Promise<string> {
     try {
-      console.log('Sending message to Kognys API:', message);
-      
-      // Make the POST request to /api/chat
-      const response = await fetch(`${BASE_URL}/api/chat`, {
+      const response = await fetch(`${BASE_URL}/api/chat/session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: message,
-          sessionId: this.sessionId,
           preferences: { language: 'en' }
         }),
       });
 
-      console.log('Chat API response status:', response.status);
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.log('Chat API error:', errorText);
-        throw new Error(`Chat API error: ${response.status} - ${errorText}`);
+        throw new Error(`Failed to create session: ${response.statusText}`);
       }
 
-      const result = await response.json();
-      console.log('Chat API result:', result);
+      const session: ChatSession = await response.json();
+      this.sessionId = session.sessionId;
 
-      // Create response message
+      // Join the session room
+      if (this.socket && this.isConnected) {
+        this.socket.emit('join', { sessionId: this.sessionId });
+      }
+
+      return this.sessionId;
+    } catch (error) {
+      console.error('Error creating session:', error);
+      throw error;
+    }
+  }
+
+  sendMessage(
+    message: string,
+    onStreamChunk: (chunk: StreamChunk) => void,
+    onComplete: (response: ChatMessage) => void,
+    onError: (error: Error) => void
+  ) {
+    if (!this.socket || !this.sessionId) {
+      onError(new Error('Not connected or no session'));
+      return;
+    }
+
+    // Listen for streaming responses
+    this.socket.on('chat:stream:start', () => {
+      console.log('Stream started');
+    });
+
+    this.socket.on('chat:stream:chunk', (chunk: { content: string }) => {
+      onStreamChunk({
+        content: chunk.content,
+        isComplete: false
+      });
+    });
+
+    this.socket.on('chat:stream:complete', (response: any) => {
       const chatMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: result.response || result.message || 'No response received',
+        content: response.content || response.message || '',
         timestamp: new Date(),
-        context: result.context,
-        insights: result.insights
+        context: response.context,
+        insights: response.insights
       };
-
-      // Update session ID if provided
-      if (result.sessionId) {
-        this.sessionId = result.sessionId;
-      }
-
       onComplete(chatMessage);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      onError(error as Error);
-    }
+      
+      // Clean up listeners
+      this.socket?.off('chat:stream:chunk');
+      this.socket?.off('chat:stream:complete');
+    });
+
+    this.socket.on('error', (error: any) => {
+      onError(new Error(error.message || 'An error occurred'));
+    });
+
+    // Send the message
+    this.socket.emit('chat:message', {
+      sessionId: this.sessionId,
+      message
+    });
   }
 
   async getChatHistory(sessionId?: string): Promise<ChatMessage[]> {
