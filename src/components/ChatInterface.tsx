@@ -119,7 +119,7 @@ const ChatInterface = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask about blockchain or AI..."
+            placeholder="Enter a prompt requesting a research paper"
             className="flex-1 bg-input/50 border-border/30 focus:border-primary text-sm"
             disabled={isLoading}
           />

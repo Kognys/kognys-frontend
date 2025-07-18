@@ -34,7 +34,7 @@ const SimpleChat = () => {
         className="bg-card/30 backdrop-blur-md border-border/30"
       >
         <ChatInputTextArea 
-          placeholder="Ask about blockchain or AI..."
+          placeholder="Enter a prompt requesting a research paper"
           className="text-foreground placeholder:text-muted-foreground"
         />
         <ChatInputSubmit />
