@@ -123,7 +123,7 @@ const SimpleChat = () => {
       >
         <ChatInputTextArea 
           placeholder="How can I help you today?"
-          className="text-foreground placeholder:text-muted-foreground min-h-[52px] text-base"
+          className="text-foreground placeholder:text-muted-foreground min-h-[60px] text-base py-4"
         />
         <ChatInputSubmit />
       </ChatInput>
@@ -139,8 +139,8 @@ const SimpleChat = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => handleAreaClick(area.id)}
-                className={`flex items-center gap-2 h-9 px-4 bg-card/60 hover:bg-card/80 border-border/50 transition-all duration-200 ${
-                  selectedArea === area.id ? 'ring-2 ring-primary/50 bg-card/90' : ''
+                className={`flex items-center gap-2 h-9 px-4 bg-card/60 hover:bg-orange-500/20 hover:border-orange-500/50 border-border/50 transition-all duration-200 ${
+                  selectedArea === area.id ? 'ring-2 ring-orange-500/50 bg-orange-500/10 border-orange-500/50' : ''
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -162,7 +162,7 @@ const SimpleChat = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleSuggestionClick(suggestion)}
-                    className="justify-start text-left h-auto py-2 px-3 hover:bg-muted/50 text-sm leading-relaxed whitespace-normal"
+                    className="justify-start text-left h-auto py-2 px-3 hover:bg-orange-500/10 hover:text-orange-600 text-sm leading-relaxed whitespace-normal transition-colors duration-200"
                   >
                     {suggestion}
                   </Button>
