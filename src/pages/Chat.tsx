@@ -25,21 +25,43 @@ const Chat = () => {
     setCustomLoading(true);
     setCustomInput('');
 
-    // Mock AI response
-    setTimeout(() => {
-      const assistantMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `This is a mock AI response for your research request. In a real implementation, this would be connected to an actual AI service like OpenAI, Anthropic, or your custom AI agents.
+    // Create streaming AI response
+    const assistantMessageId = (Date.now() + 1).toString();
+    const fullResponse = `This is a mock AI response for your research request. In a real implementation, this would be connected to an actual AI service like OpenAI, Anthropic, or your custom AI agents.
 
 Your request: "${userMessage.content}"
 
-This would typically generate a detailed research paper or analysis based on your prompt.`,
-      };
+This would typically generate a detailed research paper or analysis based on your prompt. The streaming effect makes it feel more interactive and engaging, simulating how real AI models generate responses token by token.
 
-      setCustomMessages(prev => [...prev, assistantMessage]);
-      setCustomLoading(false);
-    }, 2000);
+Here's some additional content to demonstrate the streaming effect working with longer responses that would typically take more time to generate in a real AI application.`;
+
+    // Add empty assistant message first
+    const assistantMessage = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+    };
+
+    setCustomMessages(prev => [...prev, assistantMessage]);
+    setCustomLoading(false);
+
+    // Stream the response character by character
+    let currentIndex = 0;
+    const streamingInterval = setInterval(() => {
+      if (currentIndex < fullResponse.length) {
+        const chunk = fullResponse.slice(0, currentIndex + 1);
+        setCustomMessages(prev => 
+          prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: chunk }
+              : msg
+          )
+        );
+        currentIndex++;
+      } else {
+        clearInterval(streamingInterval);
+      }
+    }, 20); // Adjust speed by changing interval (lower = faster)
   };
   
   useEffect(() => {
