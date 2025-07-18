@@ -102,19 +102,34 @@ All colors MUST be HSL.
 
 @keyframes zoom-to-chat {
   0% {
-    transform: scale(1);
+    transform: scale(1) translateZ(0);
     opacity: 1;
+    filter: blur(0px);
   }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.8;
+  30% {
+    transform: scale(1.1) translateZ(0);
+    opacity: 0.9;
+    filter: blur(0px);
+  }
+  60% {
+    transform: scale(3) translateZ(0);
+    opacity: 0.7;
+    filter: blur(1px);
+  }
+  85% {
+    transform: scale(8) translateZ(0);
+    opacity: 0.3;
+    filter: blur(3px);
   }
   100% {
-    transform: scale(20);
+    transform: scale(20) translateZ(0);
     opacity: 0;
+    filter: blur(10px);
   }
 }
 
 .animate-zoom-to-chat {
-  animation: zoom-to-chat 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: zoom-to-chat 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  transform-origin: center center;
+  will-change: transform, opacity, filter;
 }
