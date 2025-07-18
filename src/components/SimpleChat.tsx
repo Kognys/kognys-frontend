@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChatInput, ChatInputTextArea, ChatInputSubmit } from './SimpleChatInput';
 import { Button } from '@/components/ui/button';
@@ -78,7 +78,25 @@ const SimpleChat = () => {
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setSelectedArea(null);
+      }
+    };
+
+    if (selectedArea) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [selectedArea]);
 
   const handleSubmit = () => {
     if (!value.trim()) return;
@@ -112,7 +130,7 @@ const SimpleChat = () => {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto chat-container">
+    <div className="w-full max-w-3xl mx-auto chat-container" ref={menuRef}>
       <ChatInput
         value={value}
         onChange={(e) => setValue(e.target.value)}
