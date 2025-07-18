@@ -142,6 +142,7 @@ const SimpleChat = () => {
         <ChatInputTextArea 
           placeholder="How can I help you today?"
           className="text-foreground placeholder:text-muted-foreground min-h-[80px] text-base py-6"
+          autoFocus
         />
         <ChatInputSubmit />
       </ChatInput>
