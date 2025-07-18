@@ -61,7 +61,7 @@ Here's some additional content to demonstrate the streaming effect working with 
       } else {
         clearInterval(streamingInterval);
       }
-    }, 20); // Adjust speed by changing interval (lower = faster)
+    }, 8); // Faster streaming speed
   };
   
   useEffect(() => {
@@ -79,59 +79,69 @@ Here's some additional content to demonstrate the streaming effect working with 
   }, [location.state, customMessages.length]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background font-inter flex flex-col">
       {/* Messages Area */}
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full">
-          <div className="max-w-3xl mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto px-6 py-16">
             {customMessages.length === 0 ? (
-              <div className="text-center text-muted-foreground py-12">
-                <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Start a conversation to see results here</p>
+              <div className="text-center py-32">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/5 mb-6">
+                  <Bot className="w-8 h-8 text-primary/60" strokeWidth={1.5} />
+                </div>
+                <p className="text-muted-foreground/60 text-sm font-light">Ready to assist with your research</p>
               </div>
             ) : (
-              <div className="space-y-6">
-                {customMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-4 ${
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
-                    {message.role === 'assistant' && (
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Bot className="w-4 h-4 text-primary" />
+              <div className="space-y-12">
+                {customMessages.map((message, index) => (
+                  <div key={message.id} className="group">
+                    {message.role === 'user' ? (
+                      <div className="flex items-start gap-4 justify-end">
+                        <div className="text-right">
+                          <div className="inline-block text-sm font-medium text-primary/80 mb-2">You</div>
+                          <div className="text-foreground/90 text-lg font-medium leading-relaxed">
+                            {message.content}
+                          </div>
+                        </div>
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mt-1">
+                          <User className="w-5 h-5 text-primary/70" strokeWidth={1.5} />
+                        </div>
                       </div>
-                    )}
-                    
-                    <div
-                      className={`max-w-2xl p-4 rounded-lg ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                    </div>
-
-                    {message.role === 'user' && (
-                      <div className="w-8 h-8 bg-secondary/30 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User className="w-4 h-4 text-foreground" />
+                    ) : (
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center mt-1">
+                          <Bot className="w-5 h-5 text-muted-foreground/70" strokeWidth={1.5} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-muted-foreground/80 mb-3">Assistant</div>
+                          <div className="prose prose-neutral dark:prose-invert max-w-none">
+                            <div className="text-foreground/90 text-base font-light leading-relaxed whitespace-pre-wrap">
+                              {message.content}
+                              {message.content && (
+                                <span className="inline-block w-0.5 h-5 bg-primary/60 ml-0.5 animate-pulse" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
                 ))}
                 
                 {customLoading && (
-                  <div className="flex gap-4 justify-start">
-                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4 h-4 text-primary" />
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center">
+                      <Bot className="w-5 h-5 text-muted-foreground/70" strokeWidth={1.5} />
                     </div>
-                    <div className="bg-muted p-4 rounded-lg">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-muted-foreground/80 mb-3">Assistant</div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-primary/60 rounded-full animate-pulse"></div>
+                          <div className="w-2 h-2 bg-primary/40 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="w-2 h-2 bg-primary/30 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                        </div>
+                        <span className="text-xs text-muted-foreground/60 font-light">Thinking...</span>
                       </div>
                     </div>
                   </div>
@@ -143,19 +153,26 @@ Here's some additional content to demonstrate the streaming effect working with 
       </div>
 
       {/* Chat Input */}
-      <div className="border-t bg-background/80 backdrop-blur-sm">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <form onSubmit={handleCustomSubmit} className="flex gap-2">
-            <Input
-              value={customInput}
-              onChange={(e) => setCustomInput(e.target.value)}
-              placeholder="Type your message..."
-              className="flex-1"
-              disabled={customLoading}
-            />
-            <Button type="submit" disabled={!customInput.trim() || customLoading}>
-              <Send className="w-4 h-4" />
-            </Button>
+      <div className="border-t border-border/40 bg-background/60 backdrop-blur-lg">
+        <div className="max-w-4xl mx-auto px-6 py-6">
+          <form onSubmit={handleCustomSubmit} className="relative">
+            <div className="relative">
+              <Input
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                placeholder="Ask me anything..."
+                className="w-full h-14 px-6 pr-14 text-base font-light bg-muted/30 border-border/40 rounded-2xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200 placeholder:text-muted-foreground/50"
+                disabled={customLoading}
+              />
+              <Button 
+                type="submit" 
+                disabled={!customInput.trim() || customLoading}
+                className="absolute right-2 top-2 h-10 w-10 rounded-xl bg-primary/90 hover:bg-primary disabled:opacity-30 transition-all duration-200"
+                size="sm"
+              >
+                <Send className="w-4 h-4" strokeWidth={2} />
+              </Button>
+            </div>
           </form>
         </div>
       </div>

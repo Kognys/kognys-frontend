@@ -56,8 +56,8 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    @apply bg-background text-foreground font-inter;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   /* Hide scrollbar */
@@ -117,4 +117,46 @@ All colors MUST be HSL.
 
 .animate-zoom-to-chat {
   animation: zoom-to-chat 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* High-end typography and effects */
+.prose {
+  @apply text-foreground/90;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  @apply font-inter font-semibold;
+}
+
+.prose p {
+  @apply leading-relaxed;
+}
+
+.prose code {
+  @apply font-mono text-sm;
+}
+
+/* Cursor typing effect */
+@keyframes cursor-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: cursor-blink 1s infinite;
+}
+
+/* Gradient text */
+.text-gradient {
+  @apply bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent;
+}
+
+/* Subtle glow effect */
+.glow {
+  box-shadow: 0 0 20px hsla(var(--primary), 0.15);
+}
+
+.glow-hover:hover {
+  box-shadow: 0 0 30px hsla(var(--primary), 0.25);
+  transition: box-shadow 0.3s ease;
 }
