@@ -99,3 +99,22 @@ All colors MUST be HSL.
 .animate-text-fade {
   animation: text-fade 4s ease-in-out infinite;
 }
+
+@keyframes zoom-to-chat {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(20);
+    opacity: 0;
+  }
+}
+
+.animate-zoom-to-chat {
+  animation: zoom-to-chat 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}

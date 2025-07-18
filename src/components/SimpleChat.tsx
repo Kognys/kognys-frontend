@@ -1,22 +1,29 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChatInput, ChatInputTextArea, ChatInputSubmit } from './SimpleChatInput';
 
 const SimpleChat = () => {
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = () => {
     if (!value.trim()) return;
     
-    console.log('Submitted:', value);
     setLoading(true);
     
-    // Simulate processing
-    setTimeout(() => {
-      setLoading(false);
-      setValue('');
-    }, 2000);
+    // Zoom effect and navigation
+    const chatContainer = document.querySelector('.chat-container');
+    if (chatContainer) {
+      chatContainer.classList.add('animate-zoom-to-chat');
+      
+      setTimeout(() => {
+        navigate('/chat', { 
+          state: { initialMessage: value }
+        });
+      }, 800);
+    }
   };
 
   const handleStop = () => {
@@ -24,7 +31,7 @@ const SimpleChat = () => {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-2xl mx-auto chat-container">
       <ChatInput
         value={value}
         onChange={(e) => setValue(e.target.value)}
