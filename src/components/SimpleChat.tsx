@@ -13,16 +13,13 @@ const SimpleChat = () => {
     
     setLoading(true);
     
-    // Generate a unique chat ID
-    const chatId = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
     // Zoom effect and navigation
     const chatContainer = document.querySelector('.chat-container');
     if (chatContainer) {
       chatContainer.classList.add('animate-zoom-to-chat');
       
       setTimeout(() => {
-        navigate(`/chat/${chatId}`, { 
+        navigate('/chat', { 
           state: { initialMessage: value }
         });
       }, 800);
