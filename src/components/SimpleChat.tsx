@@ -7,14 +7,14 @@ import { Edit, BookOpen, Microscope, Dna, Atom, Cpu, FlaskConical } from 'lucide
 
 const scienceAreas = [
   {
-    id: 'write',
-    label: 'Write',
+    id: 'math',
+    label: 'Math',
     icon: Edit,
     suggestions: [
-      'Write a research proposal for quantum computing applications',
-      'Draft a grant application for climate change research',
-      'Create a literature review on CRISPR gene editing',
-      'Develop a research methodology for biomarker discovery'
+      'Solve complex differential equations for population dynamics',
+      'Model statistical distributions in clinical trials',
+      'Apply linear algebra to genomic data analysis',
+      'Develop mathematical models for epidemic spread'
     ]
   },
   {
