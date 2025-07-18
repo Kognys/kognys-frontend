@@ -9,7 +9,8 @@ const DynamicText = () => {
     "Students",
     "AI Researchers",
     "Blockchain Researchers",
-    "Crypto Degens"
+    "Teachers",
+    "Undergraduates"
   ];
 
   useEffect(() => {
