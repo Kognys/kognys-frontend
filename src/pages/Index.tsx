@@ -24,6 +24,13 @@ const Index = () => {
           {/* Simple Chat */}
           <SimpleChat />
         </div>
+        
+        {/* Footer */}
+        <footer className="relative z-10 py-8 text-center">
+          <p className="text-muted-foreground text-sm">
+            Powered by Unibase
+          </p>
+        </footer>
       </div>
     </div>
   );
