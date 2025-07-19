@@ -14,6 +14,18 @@ const Index = () => {
         {/* Hero Section */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
           <div className="text-center max-w-4xl mx-auto mb-12">
+            {/* Kognys Branding */}
+            <div className="flex items-center justify-center gap-3 mb-8 animate-fade-in">
+              <img 
+                src="/lovable-uploads/88f06cbd-45cf-4d99-aa6e-0c98419665fd.png" 
+                alt="Kognys Logo" 
+                className="w-12 h-12 md:w-16 md:h-16"
+              />
+              <span className="text-2xl md:text-3xl font-bold text-foreground">
+                Kognys
+              </span>
+            </div>
+            
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
               <span className="text-foreground">AI-Powered DeSci Hub for</span>
               <br />
