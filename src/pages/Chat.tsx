@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, User } from 'lucide-react';
+import { kognysPaperApi } from '@/lib/kognysPaperApi';
+import { toast } from 'sonner';
 
 const Chat = () => {
   const location = useLocation();
@@ -22,46 +24,59 @@ const Chat = () => {
     };
 
     setCustomMessages(prev => [...prev, userMessage]);
+    const currentInput = customInput;
     setCustomLoading(true);
     setCustomInput('');
 
-    // Create streaming AI response
-    const assistantMessageId = (Date.now() + 1).toString();
-    const fullResponse = `This is a mock AI response for your research request. In a real implementation, this would be connected to an actual AI service like OpenAI, Anthropic, or your custom AI agents.
+    try {
+      const response = await kognysPaperApi.createPaper(currentInput);
+      
+      // Create streaming effect for the response
+      const assistantMessageId = (Date.now() + 1).toString();
+      const fullResponse = response.paper_content;
 
-Your request: "${userMessage.content}"
+      // Add empty assistant message first
+      const assistantMessage = {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+      };
 
-This would typically generate a detailed research paper or analysis based on your prompt. The streaming effect makes it feel more interactive and engaging, simulating how real AI models generate responses token by token.
+      setCustomMessages(prev => [...prev, assistantMessage]);
+      setCustomLoading(false);
 
-Here's some additional content to demonstrate the streaming effect working with longer responses that would typically take more time to generate in a real AI application.`;
+      // Stream the response character by character
+      let currentIndex = 0;
+      const streamingInterval = setInterval(() => {
+        if (currentIndex < fullResponse.length) {
+          const chunk = fullResponse.slice(0, currentIndex + 1);
+          setCustomMessages(prev => 
+            prev.map(msg => 
+              msg.id === assistantMessageId 
+                ? { ...msg, content: chunk }
+                : msg
+            )
+          );
+          currentIndex++;
+        } else {
+          clearInterval(streamingInterval);
+        }
+      }, 8); // Streaming speed
 
-    // Add empty assistant message first
-    const assistantMessage = {
-      id: assistantMessageId,
-      role: 'assistant',
-      content: '',
-    };
-
-    setCustomMessages(prev => [...prev, assistantMessage]);
-    setCustomLoading(false);
-
-    // Stream the response character by character
-    let currentIndex = 0;
-    const streamingInterval = setInterval(() => {
-      if (currentIndex < fullResponse.length) {
-        const chunk = fullResponse.slice(0, currentIndex + 1);
-        setCustomMessages(prev => 
-          prev.map(msg => 
-            msg.id === assistantMessageId 
-              ? { ...msg, content: chunk }
-              : msg
-          )
-        );
-        currentIndex++;
-      } else {
-        clearInterval(streamingInterval);
-      }
-    }, 8); // Faster streaming speed
+      toast.success('Research paper generated successfully!');
+    } catch (error) {
+      console.error('Error generating paper:', error);
+      
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `Sorry, I encountered an error while generating your research paper: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+      };
+      
+      setCustomMessages(prev => [...prev, errorMessage]);
+      setCustomLoading(false);
+      toast.error('Failed to generate research paper');
+    }
   };
   
   useEffect(() => {

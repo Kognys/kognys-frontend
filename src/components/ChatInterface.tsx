@@ -4,6 +4,8 @@ import { Send, Bot, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { kognysPaperApi, getUserId } from '@/lib/kognysPaperApi';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -35,21 +37,37 @@ const ChatInterface = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputValue;
     setInputValue('');
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const response = await kognysPaperApi.createPaper(currentInput);
+      
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: "This is a demo response. In a real implementation, this would connect to your AI agents to provide insights about blockchain and AI technologies.",
+        text: response.paper_content,
         sender: 'bot',
         timestamp: new Date()
       };
       
       setMessages(prev => [...prev, botMessage]);
+      toast.success('Research paper generated successfully!');
+    } catch (error) {
+      console.error('Error generating paper:', error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: `Sorry, I encountered an error while generating your research paper: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+      toast.error('Failed to generate research paper');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
