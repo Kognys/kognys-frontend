@@ -148,8 +148,8 @@ const SimpleChat = () => {
       </ChatInput>
 
       {/* Science Area Buttons */}
-      <div className="mt-6 space-y-3">
-        <div className="flex flex-wrap gap-2 justify-center">
+      <div className="mt-4 sm:mt-6 space-y-3">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center">
           {scienceAreas.map((area) => {
             const Icon = area.icon;
             return (
@@ -158,11 +158,11 @@ const SimpleChat = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => handleAreaClick(area.id)}
-                className={`flex items-center gap-2 h-9 px-4 bg-card/60 hover:bg-orange-500/20 hover:border-orange-500/50 border-border/50 transition-all duration-200 ${
+                className={`flex items-center gap-1.5 sm:gap-2 h-8 sm:h-9 px-2 sm:px-4 text-xs sm:text-sm bg-card/60 hover:bg-orange-500/20 hover:border-orange-500/50 border-border/50 transition-all duration-200 ${
                   selectedArea === area.id ? 'ring-2 ring-orange-500/50 bg-orange-500/10 border-orange-500/50' : ''
                 }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
                 {area.label}
               </Button>
             );
@@ -171,7 +171,7 @@ const SimpleChat = () => {
 
         {/* Suggestions Panel */}
         {selectedArea && (
-          <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl p-4 shadow-lg animate-fade-in">
+          <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl p-3 sm:p-4 shadow-lg animate-fade-in">
             <div className="grid gap-2">
               {scienceAreas
                 .find(area => area.id === selectedArea)
@@ -181,7 +181,7 @@ const SimpleChat = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleSuggestionClick(suggestion)}
-                    className="justify-start text-left h-auto py-2 px-3 hover:bg-orange-500/10 hover:text-orange-600 text-sm leading-relaxed whitespace-normal transition-colors duration-200"
+                    className="justify-start text-left h-auto py-2 px-2 sm:px-3 hover:bg-orange-500/10 hover:text-orange-600 text-xs sm:text-sm leading-relaxed whitespace-normal transition-colors duration-200"
                   >
                     {suggestion}
                   </Button>
