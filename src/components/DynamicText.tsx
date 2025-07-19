@@ -30,6 +30,7 @@ const DynamicText = () => {
     <span className={`text-primary font-bold transition-all duration-300 ${
       isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
     }`}>
+      
       {texts[currentIndex]}
     </span>
   );
