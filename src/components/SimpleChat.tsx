@@ -130,7 +130,7 @@ const SimpleChat = () => {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto chat-container px-4" ref={menuRef}>
+    <div className="w-full max-w-3xl mx-auto chat-container" ref={menuRef}>
       <ChatInput
         value={value}
         onChange={(e) => setValue(e.target.value)}
