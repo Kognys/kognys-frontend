@@ -12,8 +12,8 @@ const Index = () => {
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* Hero Section */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
-          <div className="text-center max-w-4xl mx-auto mb-8 sm:mb-12">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 sm:px-8 py-8 sm:py-12">
+          <div className="text-center max-w-4xl mx-auto mb-8 sm:mb-12 px-2">
             {/* Kognys Branding */}
             <div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 animate-fade-in">
               <img 
