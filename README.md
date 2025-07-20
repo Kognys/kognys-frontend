@@ -1,6 +1,6 @@
 # Kognys Frontend
 
-![Kognys Logo](public/kognys-logo.png)
+![Kognys Logo](public/88f06cbd-45cf-4d99-aa6e-0c98419665fd.png)
 
 An AI-powered DeSci (Decentralized Science) hub that provides intelligent research assistance across multiple scientific domains. Built with React, TypeScript, and modern web technologies.
 

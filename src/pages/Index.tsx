@@ -17,7 +17,7 @@ const Index = () => {
             {/* Kognys Branding */}
             <div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 animate-fade-in">
               <img 
-                src="/kognys-logo.png" 
+                src="/88f06cbd-45cf-4d99-aa6e-0c98419665fd.png" 
                 alt="Kognys Logo" 
                 className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-16 lg:h-16 object-contain"
               />

@@ -95,7 +95,7 @@ export function ClaudeSidebar({ isOpen, onToggle }: ClaudeSidebarProps) {
         <div className="flex items-center justify-between p-3 border-b border-border/40">
           <div className="flex items-center gap-2">
             <img 
-              src="/kognys-logo.png" 
+              src="/88f06cbd-45cf-4d99-aa6e-0c98419665fd.png" 
               alt="Kognys Logo" 
               className="w-8 h-8 object-contain"
             />
