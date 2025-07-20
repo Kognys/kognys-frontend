@@ -141,7 +141,7 @@ const SimpleChatPage = () => {
             <div className="text-center">
               <div className="flex items-center justify-center gap-3 mb-4">
                 <img 
-                  src="/88f06cbd-45cf-4d99-aa6e-0c98419665fd.png" 
+                  src="/kognys-logo.png" 
                   alt="Kognys Logo" 
                   className="w-12 h-12 object-contain"
                 />
