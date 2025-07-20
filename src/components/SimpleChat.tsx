@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { chatStore } from '@/lib/chatStore';
 import { ChatInput, ChatInputTextArea, ChatInputSubmit } from './SimpleChatInput';
 import { Button } from '@/components/ui/button';
 import { Edit, BookOpen, Microscope, Dna, Atom, Cpu, FlaskConical } from 'lucide-react';
@@ -109,7 +110,9 @@ const SimpleChat = () => {
       chatContainer.classList.add('animate-zoom-to-chat');
       
       setTimeout(() => {
-        navigate('/chat', { 
+        // Create a new chat and navigate to it with initial message
+        const newChat = chatStore.createChat();
+        navigate(`/chat/${newChat.id}`, { 
           state: { initialMessage: value }
         });
       }, 800);

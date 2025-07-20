@@ -43,6 +43,14 @@ export class KognysPaperApi {
       user_id: userId
     };
 
+    console.log('🚀 API Call - Create Paper:', {
+      url: `${this.baseUrl}/papers`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: requestBody,
+      timestamp: new Date().toISOString()
+    });
+
     try {
       const response = await fetch(`${this.baseUrl}/papers`, {
         method: 'POST',
@@ -52,21 +60,64 @@ export class KognysPaperApi {
         body: JSON.stringify(requestBody),
       });
 
+      console.log('📡 API Response - Create Paper:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        url: response.url,
+        timestamp: new Date().toISOString()
+      });
+
       if (!response.ok) {
-        const errorData: ApiError = await response.json().catch(() => ({}));
-        const errorMessage = errorData.detail?.[0]?.msg || `HTTP error! status: ${response.status}`;
+        const errorData: any = await response.json().catch(() => ({}));
+        console.error('❌ API Error Response:', {
+          status: response.status,
+          errorData,
+          timestamp: new Date().toISOString()
+        });
+        
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        if (response.status === 400) {
+          // For 400 errors, try to extract the actual error message
+          errorMessage = errorData.detail?.[0]?.msg || 
+                        errorData.detail || 
+                        errorData.message || 
+                        errorData.error || 
+                        errorMessage;
+        } else {
+          errorMessage = errorData.detail?.[0]?.msg || errorMessage;
+        }
+        
         throw new Error(errorMessage);
       }
 
       const data: PaperResponse = await response.json();
+      console.log('✅ API Success Response - Create Paper:', {
+        data,
+        timestamp: new Date().toISOString()
+      });
+      
       return data;
     } catch (error) {
-      console.error('Error creating paper:', error);
+      console.error('💥 API Call Failed - Create Paper:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      });
       throw error instanceof Error ? error : new Error('Failed to create paper');
     }
   }
 
   async getPaper(paperId: string): Promise<PaperResponse> {
+    console.log('🚀 API Call - Get Paper:', {
+      url: `${this.baseUrl}/papers/${paperId}`,
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      paperId,
+      timestamp: new Date().toISOString()
+    });
+
     try {
       const response = await fetch(`${this.baseUrl}/papers/${paperId}`, {
         method: 'GET',
@@ -75,16 +126,51 @@ export class KognysPaperApi {
         },
       });
 
+      console.log('📡 API Response - Get Paper:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        url: response.url,
+        timestamp: new Date().toISOString()
+      });
+
       if (!response.ok) {
-        const errorData: ApiError = await response.json().catch(() => ({}));
-        const errorMessage = errorData.detail?.[0]?.msg || `HTTP error! status: ${response.status}`;
+        const errorData: any = await response.json().catch(() => ({}));
+        console.error('❌ API Error Response:', {
+          status: response.status,
+          errorData,
+          timestamp: new Date().toISOString()
+        });
+        
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        if (response.status === 400) {
+          // For 400 errors, try to extract the actual error message
+          errorMessage = errorData.detail?.[0]?.msg || 
+                        errorData.detail || 
+                        errorData.message || 
+                        errorData.error || 
+                        errorMessage;
+        } else {
+          errorMessage = errorData.detail?.[0]?.msg || errorMessage;
+        }
+        
         throw new Error(errorMessage);
       }
 
       const data: PaperResponse = await response.json();
+      console.log('✅ API Success Response - Get Paper:', {
+        data,
+        timestamp: new Date().toISOString()
+      });
+      
       return data;
     } catch (error) {
-      console.error('Error getting paper:', error);
+      console.error('💥 API Call Failed - Get Paper:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      });
       throw error instanceof Error ? error : new Error('Failed to get paper');
     }
   }

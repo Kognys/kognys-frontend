@@ -40,7 +40,15 @@ const Index = () => {
         {/* Footer */}
         <footer className="relative z-10 py-8 text-center">
           <p className="text-muted-foreground text-sm">
-            Powered by Unibase
+            Powered by{' '}
+            <a 
+              href="https://www.unibase.io/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-primary hover:text-primary/80 transition-colors underline-offset-4 hover:underline"
+            >
+              Unibase
+            </a>
           </p>
         </footer>
       </div>

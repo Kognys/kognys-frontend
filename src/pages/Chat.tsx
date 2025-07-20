@@ -1,88 +1,65 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Bot, User } from 'lucide-react';
-import { kognysPaperApi } from '@/lib/kognysPaperApi';
-import { toast } from 'sonner';
+import { Send, Bot, User, StopCircle } from 'lucide-react';
+import { useKognysChat } from '@/hooks/useKognysChat';
+import { chatStore, type Chat as ChatType } from '@/lib/chatStore';
+import ReactMarkdown from 'react-markdown';
 
 const Chat = () => {
   const location = useLocation();
-  const [customMessages, setCustomMessages] = useState<any[]>([]);
-  const [customInput, setCustomInput] = useState('');
-  const [customLoading, setCustomLoading] = useState(false);
-  
-  const handleCustomSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customInput.trim()) return;
+  const { chatId } = useParams();
+  const navigate = useNavigate();
+  const [currentChat, setCurrentChat] = useState<ChatType | null>(null);
 
-    const userMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: customInput,
-    };
-
-    setCustomMessages(prev => [...prev, userMessage]);
-    const currentInput = customInput;
-    setCustomLoading(true);
-    setCustomInput('');
-
-    try {
-      const response = await kognysPaperApi.createPaper(currentInput);
-      
-      // Create streaming effect for the response
-      const assistantMessageId = (Date.now() + 1).toString();
-      const fullResponse = response.paper_content;
-
-      // Add empty assistant message first
-      const assistantMessage = {
-        id: assistantMessageId,
-        role: 'assistant',
-        content: '',
-      };
-
-      setCustomMessages(prev => [...prev, assistantMessage]);
-      setCustomLoading(false);
-
-      // Stream the response character by character
-      let currentIndex = 0;
-      const streamingInterval = setInterval(() => {
-        if (currentIndex < fullResponse.length) {
-          const chunk = fullResponse.slice(0, currentIndex + 1);
-          setCustomMessages(prev => 
-            prev.map(msg => 
-              msg.id === assistantMessageId 
-                ? { ...msg, content: chunk }
-                : msg
-            )
-          );
-          currentIndex++;
-        } else {
-          clearInterval(streamingInterval);
-        }
-      }, 8); // Streaming speed
-
-      toast.success('Research paper generated successfully!');
-    } catch (error) {
-      console.error('Error generating paper:', error);
-      
-      const errorMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `Sorry, I encountered an error while generating your research paper: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-      };
-      
-      setCustomMessages(prev => [...prev, errorMessage]);
-      setCustomLoading(false);
-      toast.error('Failed to generate research paper');
+  // Initialize or get existing chat
+  useEffect(() => {
+    if (chatId) {
+      let chat = chatStore.getChat(chatId);
+      if (!chat) {
+        // Chat doesn't exist, create a new one
+        const newChat = chatStore.createChat();
+        navigate(`/chat/${newChat.id}`, { replace: true });
+        return;
+      }
+      setCurrentChat(chat);
+    } else {
+      // No chatId, create new chat and redirect
+      const newChat = chatStore.createChat();
+      navigate(`/chat/${newChat.id}`, { replace: true });
     }
-  };
+  }, [chatId, navigate]);
+  const { 
+    messages, 
+    input, 
+    status, 
+    handleInputChange, 
+    handleSubmit, 
+    setInput,
+    stop,
+    isLoading 
+  } = useKognysChat({
+    throttle: 50,
+    initialMessages: currentChat?.messages || [],
+    onMessage: (message) => {
+      // Save message to chat store
+      if (chatId) {
+        chatStore.addMessage(chatId, message);
+        // Update current chat state
+        const updatedChat = chatStore.getChat(chatId);
+        if (updatedChat) {
+          setCurrentChat(updatedChat);
+        }
+      }
+    }
+  });
   
   useEffect(() => {
     const initialMessage = location.state?.initialMessage;
-    if (initialMessage && customMessages.length === 0) {
-      setCustomInput(initialMessage);
+    if (initialMessage && messages.length === 0) {
+      setInput(initialMessage);
       // Auto-submit the initial message
       setTimeout(() => {
         const form = document.querySelector('form');
@@ -91,7 +68,7 @@ const Chat = () => {
         }
       }, 100);
     }
-  }, [location.state, customMessages.length]);
+  }, [location.state, messages.length, setInput]);
 
   return (
     <div className="min-h-screen bg-background font-inter flex flex-col">
@@ -99,7 +76,7 @@ const Chat = () => {
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full">
           <div className="max-w-4xl mx-auto px-6 py-16">
-            {customMessages.length === 0 ? (
+            {messages.length === 0 ? (
               <div className="text-center py-32">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/5 mb-6">
                   <Bot className="w-8 h-8 text-primary/60" strokeWidth={1.5} />
@@ -108,7 +85,7 @@ const Chat = () => {
               </div>
             ) : (
               <div className="space-y-12">
-                {customMessages.map((message, index) => (
+                {messages.map((message, index) => (
                   <div key={message.id} className="group">
                     {message.role === 'user' ? (
                       <div className="flex items-start gap-4 justify-end">
@@ -128,14 +105,14 @@ const Chat = () => {
                           <Bot className="w-5 h-5 text-muted-foreground/70" strokeWidth={1.5} />
                         </div>
                         <div className="flex-1">
-                          <div className="text-sm font-medium text-muted-foreground/80 mb-3">Assistant</div>
-                          <div className="prose prose-neutral dark:prose-invert max-w-none">
-                            <div className="text-foreground/90 text-base font-light leading-relaxed whitespace-pre-wrap">
+                          <div className="text-sm font-medium text-muted-foreground/80 mb-3">Kognys Agent</div>
+                          <div className="prose prose-neutral dark:prose-invert prose-lg max-w-none">
+                            <ReactMarkdown>
                               {message.content}
-                              {message.content && (
-                                <span className="inline-block w-0.5 h-5 bg-primary/60 ml-0.5 animate-pulse" />
-                              )}
-                            </div>
+                            </ReactMarkdown>
+                            {(status === 'streaming' && index === messages.length - 1 && message.content) && (
+                              <span className="inline-block w-0.5 h-5 bg-primary/60 ml-0.5 animate-pulse" />
+                            )}
                           </div>
                         </div>
                       </div>
@@ -143,13 +120,13 @@ const Chat = () => {
                   </div>
                 ))}
                 
-                {customLoading && (
+                {status === 'submitted' && (
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center">
                       <Bot className="w-5 h-5 text-muted-foreground/70" strokeWidth={1.5} />
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-muted-foreground/80 mb-3">Assistant</div>
+                      <div className="text-sm font-medium text-muted-foreground/80 mb-3">Kognys Agent</div>
                       <div className="flex items-center gap-2">
                         <div className="flex gap-1">
                           <div className="w-2 h-2 bg-primary/60 rounded-full animate-pulse"></div>
@@ -170,23 +147,35 @@ const Chat = () => {
       {/* Chat Input */}
       <div className="border-t border-border/40 bg-background/60 backdrop-blur-lg">
         <div className="max-w-4xl mx-auto px-6 py-6">
-          <form onSubmit={handleCustomSubmit} className="relative">
+          <form onSubmit={handleSubmit} className="relative">
             <div className="relative">
               <Input
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
+                value={input}
+                onChange={handleInputChange}
                 placeholder="Ask me anything..."
-                className="w-full h-14 px-6 pr-14 text-base font-light bg-muted/30 border-border/40 rounded-2xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200 placeholder:text-muted-foreground/50"
-                disabled={customLoading}
+                className="w-full h-14 px-6 pr-24 text-base font-light bg-muted/30 border-border/40 rounded-2xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200 placeholder:text-muted-foreground/50"
+                disabled={isLoading}
               />
-              <Button 
-                type="submit" 
-                disabled={!customInput.trim() || customLoading}
-                className="absolute right-2 top-2 h-10 w-10 rounded-xl bg-primary/90 hover:bg-primary disabled:opacity-30 transition-all duration-200"
-                size="sm"
-              >
-                <Send className="w-4 h-4" strokeWidth={2} />
-              </Button>
+              <div className="absolute right-2 top-2 flex gap-1">
+                {(status === 'streaming' || status === 'submitted') && (
+                  <Button 
+                    type="button"
+                    onClick={stop}
+                    className="h-10 w-10 rounded-xl bg-red-500/90 hover:bg-red-500 transition-all duration-200"
+                    size="sm"
+                  >
+                    <StopCircle className="w-4 h-4" strokeWidth={2} />
+                  </Button>
+                )}
+                <Button 
+                  type="submit" 
+                  disabled={!input.trim() || isLoading}
+                  className="h-10 w-10 rounded-xl bg-primary/90 hover:bg-primary disabled:opacity-30 transition-all duration-200"
+                  size="sm"
+                >
+                  <Send className="w-4 h-4" strokeWidth={2} />
+                </Button>
+              </div>
             </div>
           </form>
         </div>
