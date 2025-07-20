@@ -7,6 +7,7 @@ import { MetaMaskIcon, GenericWalletIcon } from "@/components/icons/WalletIcons"
 interface WalletLoginModalProps {
   isOpen: boolean;
   onWalletConnected: (address: string) => void;
+  onSkip: () => void;
 }
 
 declare global {
@@ -20,7 +21,7 @@ declare global {
   }
 }
 
-export function WalletLoginModal({ isOpen, onWalletConnected }: WalletLoginModalProps) {
+export function WalletLoginModal({ isOpen, onWalletConnected, onSkip }: WalletLoginModalProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +82,7 @@ export function WalletLoginModal({ isOpen, onWalletConnected }: WalletLoginModal
         <DialogHeader className="text-center space-y-2">
           <DialogTitle className="text-2xl font-bold">Welcome to Kognys</DialogTitle>
           <DialogDescription className="text-base text-muted-foreground">
-            Connect your wallet to save your chats in the platform
+            Connect your wallet to register your user in Kognys
           </DialogDescription>
         </DialogHeader>
 
@@ -151,6 +152,23 @@ export function WalletLoginModal({ isOpen, onWalletConnected }: WalletLoginModal
               <span>Connecting to {connectingWallet}...</span>
             </div>
           )}
+
+          <div className="pt-6 border-t">
+            <div className="text-center space-y-3">
+              <p className="text-xs text-muted-foreground">
+                ⚠️ Without a wallet, your chats may be lost when you close the browser
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onSkip}
+                className="bg-yellow-300 border-yellow-400 text-yellow-900 hover:bg-yellow-400 hover:border-yellow-500"
+                disabled={isConnecting}
+              >
+                Continue without wallet
+              </Button>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
