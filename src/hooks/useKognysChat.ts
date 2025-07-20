@@ -52,20 +52,28 @@ export function useKognysChat({
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const throttleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const messageTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Update messages when initialMessages changes (e.g., when switching chats)
   useEffect(() => {
     setMessages(initialMessages);
   }, [initialMessages]);
 
+  // Clear all message timeouts
+  const clearAllTimeouts = useCallback(() => {
+    messageTimeouts.current.forEach(timeout => clearTimeout(timeout));
+    messageTimeouts.current.clear();
+  }, []);
+
   const stop = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    clearAllTimeouts();
     setStatus('ready');
     setStreamingMessageId(null);
-  }, []);
+  }, [clearAllTimeouts]);
 
   const throttledUpdate = useCallback((messageId: string, content: string) => {
     if (throttleTimeoutRef.current) {
@@ -115,63 +123,88 @@ export function useKognysChat({
           setStatus('streaming');
           setStreamingMessageId(assistantMessageId);
           
-          setMessages(prev => {
-            // Check if assistant message exists, if not create it
-            const hasAssistantMessage = prev.some(msg => msg.id === assistantMessageId);
-            if (!hasAssistantMessage) {
-              return [...prev, { id: assistantMessageId, role: 'assistant' as const, content: chunk }];
-            }
-            
-            // Update existing assistant message
-            return prev.map(msg => 
-              msg.id === assistantMessageId 
-                ? { ...msg, content: msg.content + chunk }
-                : msg
-            );
-          });
+          // Don't add the assistant message during streaming
+          // We'll add it at the end in onComplete
         },
         onStatus: (statusText: string, eventType: string) => {
           if (!showStatusMessages || abortControllerRef.current?.signal.aborted) return;
           
           const statusMessageId = `status-${Date.now()}`;
           
-          // Add status message
-          setMessages(prev => [...prev, {
-            id: statusMessageId,
-            role: 'status' as const,
-            content: statusText,
-            eventType,
-            temporary: true
-          }]);
+          // Check for duplicate status messages
+          setMessages(prev => {
+            const isDuplicate = prev.some(msg => 
+              msg.role === 'status' && 
+              msg.content === statusText &&
+              msg.eventType === eventType &&
+              msg.temporary === true
+            );
+            
+            if (isDuplicate) {
+              console.log('Skipping duplicate status message:', eventType, statusText);
+              return prev;
+            }
+            
+            return [...prev, {
+              id: statusMessageId,
+              role: 'status' as const,
+              content: statusText,
+              eventType,
+              temporary: true
+            }];
+          });
           
-          // Remove status message after a delay (except for certain types)
-          if (!['research_complete', 'error', 'validation_error', 'agent_debate'].includes(eventType)) {
-            setTimeout(() => {
-              setMessages(prev => prev.filter(msg => msg.id !== statusMessageId));
-            }, 5000);
-          }
+          // Remove status message after exactly 5 seconds for all types
+          const timeout = setTimeout(() => {
+            setMessages(prev => prev.filter(msg => msg.id !== statusMessageId));
+            messageTimeouts.current.delete(statusMessageId);
+          }, 5000);
+          
+          messageTimeouts.current.set(statusMessageId, timeout);
         },
         onAgentMessage: (agentName: string, message: string, agentRole?: string, messageType?: string) => {
+          console.log('🎭 Agent Message Received:', { agentName, message, agentRole, messageType });
+          
           if (!showStatusMessages) return;
           
+          // Check if we already have this exact message from the same agent
           const agentMessageId = `agent-${Date.now()}-${Math.random()}`;
+          let messageAdded = false;
           
-          // Add agent message
-          setMessages(prev => [...prev, {
-            id: agentMessageId,
-            role: 'agent' as const,
-            content: message,
-            agentName,
-            agentRole,
-            messageType,
-            temporary: true
-          }]);
+          setMessages(prev => {
+            const isDuplicate = prev.some(msg => 
+              msg.role === 'agent' && 
+              msg.agentName === agentName && 
+              msg.content === message &&
+              msg.temporary === true
+            );
+            
+            if (isDuplicate) {
+              console.log('Skipping duplicate agent message:', agentName, message);
+              return prev;
+            }
+            
+            messageAdded = true;
+            return [...prev, {
+              id: agentMessageId,
+              role: 'agent' as const,
+              content: message,
+              agentName,
+              agentRole,
+              messageType,
+              temporary: true
+            }];
+          });
           
-          // Auto-remove agent messages after a delay (except concluding messages)
-          if (messageType !== 'concluding') {
-            setTimeout(() => {
+          // Auto-remove agent messages after exactly 5 seconds
+          // Only set timeout if message was actually added
+          if (messageAdded) {
+            const timeout = setTimeout(() => {
               setMessages(prev => prev.filter(msg => msg.id !== agentMessageId));
-            }, 6000);
+              messageTimeouts.current.delete(agentMessageId);
+            }, 5000); // Exactly 5 seconds
+            
+            messageTimeouts.current.set(agentMessageId, timeout);
           }
         },
         onAgentDebate: (agents: any[], topic?: string) => {
@@ -181,23 +214,20 @@ export function useKognysChat({
         onComplete: (fullResponse: string) => {
           if (abortControllerRef.current?.signal.aborted) return;
           
-          // Remove all temporary status messages
-          setMessages(prev => prev.filter(msg => !msg.temporary));
+          // Clear all timeouts immediately when research is complete
+          clearAllTimeouts();
           
+          // Remove all temporary messages immediately and add the final assistant message
           setMessages(prev => {
-            // Check if assistant message exists, if not create it
-            const hasAssistantMessage = prev.some(msg => msg.id === assistantMessageId);
-            if (!hasAssistantMessage) {
-              return [...prev, { id: assistantMessageId, role: 'assistant' as const, content: fullResponse }];
-            }
-            
-            // Update existing assistant message
-            return prev.map(msg => 
-              msg.id === assistantMessageId 
-                ? { ...msg, content: fullResponse }
-                : msg
-            );
+            // Filter out temporary messages and add the final assistant message
+            const filteredMessages = prev.filter(msg => !msg.temporary);
+            return [...filteredMessages, { 
+              id: assistantMessageId, 
+              role: 'assistant' as const, 
+              content: fullResponse 
+            }];
           });
+          
           setStatus('ready');
           setStreamingMessageId(null);
           
@@ -210,23 +240,19 @@ export function useKognysChat({
           console.error('Error generating paper:', error);
           const errorContent = `Sorry, I encountered an error while generating your research paper: ${error.message}. Please try again.`;
           
-          // Remove all temporary status messages
-          setMessages(prev => prev.filter(msg => !msg.temporary));
+          // Clear all timeouts on error
+          clearAllTimeouts();
           
+          // Remove all temporary status messages and add error message
           setMessages(prev => {
-            // Check if assistant message exists, if not create it
-            const hasAssistantMessage = prev.some(msg => msg.id === assistantMessageId);
-            if (!hasAssistantMessage) {
-              return [...prev, { id: assistantMessageId, role: 'assistant' as const, content: errorContent }];
-            }
-            
-            // Update existing assistant message
-            return prev.map(msg => 
-              msg.id === assistantMessageId 
-                ? { ...msg, content: errorContent }
-                : msg
-            );
+            const filteredMessages = prev.filter(msg => !msg.temporary);
+            return [...filteredMessages, { 
+              id: assistantMessageId, 
+              role: 'assistant' as const, 
+              content: errorContent 
+            }];
           });
+          
           setStatus('error');
           setStreamingMessageId(null);
           onError?.(error);

@@ -188,7 +188,7 @@ const Chat = () => {
                   </div>
                 ))}
                 
-                {status === 'submitted' && (
+                {(status === 'submitted' || status === 'streaming') && (
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center">
                       <Bot className="w-5 h-5 text-muted-foreground/70" strokeWidth={1.5} />

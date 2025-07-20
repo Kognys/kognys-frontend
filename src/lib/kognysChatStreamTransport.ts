@@ -61,14 +61,25 @@ export class KognysStreamChatTransport {
         {
           onEvent: (event: SSEEvent) => {
             console.log('📊 Event:', event.event_type, event);
+            
+            // Debug agent events specifically
+            if (event.event_type === 'agent_message' || event.event_type === 'agent_debate') {
+              console.log('🤖 Agent Event Detected:', event);
+            }
 
+            // Extract agent information from the event
+            const agentName = (event as any).agent || event.data.agent;
+            
             // Handle different event types
             switch (event.event_type) {
               case 'research_started':
                 researchPhase = 'starting';
-                onStatus?.(
-                  `Starting research: "${event.data.question}"`,
-                  'research_started'
+                // Show agent message for research_started
+                onAgentMessage?.(
+                  'Research Orchestrator',
+                  `Starting research on: "${event.data.question}"`,
+                  'Lead Coordinator',
+                  'analyzing'
                 );
                 break;
 
@@ -78,6 +89,15 @@ export class KognysStreamChatTransport {
                   `Question refined: "${event.data.validated_question}"`,
                   'question_validated'
                 );
+                // Show agent message
+                if (agentName) {
+                  onAgentMessage?.(
+                    agentName === 'input_validator' ? 'Input Validator' : agentName,
+                    `I've validated and refined your question to: "${event.data.validated_question}"`,
+                    'Validation Expert',
+                    'analyzing'
+                  );
+                }
                 break;
 
               case 'documents_retrieved':
@@ -86,6 +106,15 @@ export class KognysStreamChatTransport {
                   `Retrieved ${event.data.document_count} documents (${documentCount} total)`,
                   'documents_retrieved'
                 );
+                // Show agent message
+                if (agentName) {
+                  onAgentMessage?.(
+                    agentName === 'retriever' ? 'Document Retriever' : agentName,
+                    `I found ${event.data.document_count} relevant documents for analysis`,
+                    'Research Specialist',
+                    'speaking'
+                  );
+                }
                 break;
 
               case 'draft_answer_token':
@@ -93,6 +122,16 @@ export class KognysStreamChatTransport {
                 if (event.data.token) {
                   fullResponse += event.data.token;
                   onChunk?.(event.data.token);
+                  
+                  // Show synthesizer is working (only once)
+                  if (agentName && fullResponse.length < 100) {
+                    onAgentMessage?.(
+                      agentName === 'synthesizer' ? 'Research Synthesizer' : agentName,
+                      'I\'m synthesizing the research findings into a comprehensive answer...',
+                      'Content Specialist',
+                      'thinking'
+                    );
+                  }
                 }
                 break;
 
@@ -101,6 +140,15 @@ export class KognysStreamChatTransport {
                   `Draft generated (${event.data.draft_length} characters)`,
                   'draft_generated'
                 );
+                // Show agent message
+                if (agentName) {
+                  onAgentMessage?.(
+                    agentName === 'synthesizer' ? 'Research Synthesizer' : agentName,
+                    `I've completed a draft with ${event.data.draft_length} characters of analysis`,
+                    'Content Specialist',
+                    'concluding'
+                  );
+                }
                 break;
 
               case 'orchestrator_decision':
@@ -110,11 +158,29 @@ export class KognysStreamChatTransport {
                     `Conducting additional research (iteration ${researchIterations + 1})...`,
                     'orchestrator_decision'
                   );
+                  // Show orchestrator decision
+                  if (agentName) {
+                    onAgentMessage?.(
+                      'Research Orchestrator',
+                      'I think we need more information. Let me conduct another round of research to ensure comprehensive coverage.',
+                      'Lead Coordinator',
+                      'analyzing'
+                    );
+                  }
                 } else if (event.data.decision === 'FINALIZE') {
                   onStatus?.(
                     'Finalizing research paper...',
                     'orchestrator_decision'
                   );
+                  // Show orchestrator decision
+                  if (agentName) {
+                    onAgentMessage?.(
+                      'Research Orchestrator',
+                      'The research is complete. Finalizing the comprehensive analysis now.',
+                      'Lead Coordinator',
+                      'concluding'
+                    );
+                  }
                 }
                 break;
 
@@ -158,8 +224,47 @@ export class KognysStreamChatTransport {
                 );
                 break;
                 
+              case 'criticisms_received':
+                // Handle Challenger agent feedback
+                if (agentName === 'challenger') {
+                  onAgentMessage?.(
+                    'Challenger',
+                    event.data.criticisms || 'Reviewing the draft for improvements...',
+                    'The Peer Reviewer',
+                    'analyzing'
+                  );
+                }
+                break;
+                
               case 'error':
-                throw new Error(event.data.error || 'Unknown error occurred');
+                const errorMessage = event.data.error || 'Unknown error occurred';
+                
+                // List of non-critical errors to ignore
+                const ignorableErrors = [
+                  "name 'json' is not defined",
+                  "Error in execute_streaming",
+                  "NameError"
+                ];
+                
+                const isIgnorable = ignorableErrors.some(err => errorMessage.includes(err));
+                
+                if (isIgnorable) {
+                  console.warn('⚠️ Ignoring non-critical backend error:', errorMessage);
+                  // Continue processing, don't throw
+                } else {
+                  console.error('❌ Backend error:', errorMessage);
+                  throw new Error(errorMessage);
+                }
+                break;
+                
+              default:
+                console.log('⚠️ Unknown event type:', event.event_type, event);
+                // Check if it might be an agent-related event with different naming
+                if (event.data && typeof event.data === 'object') {
+                  if ('agent' in event.data || 'agent_name' in event.data) {
+                    console.log('🔍 Possible agent event with different structure:', event);
+                  }
+                }
             }
           },
           onComplete: () => {

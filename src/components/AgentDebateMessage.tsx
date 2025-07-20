@@ -1,15 +1,4 @@
 import { useEffect, useState } from 'react';
-import { 
-  Brain,
-  Search,
-  FileText,
-  Microscope,
-  FlaskConical,
-  Lightbulb,
-  MessageSquare,
-  UserCircle,
-  Sparkles
-} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AgentDebateMessageProps {
@@ -20,29 +9,25 @@ interface AgentDebateMessageProps {
   className?: string;
 }
 
-// Agent icon mapping based on name or role
-const getAgentIcon = (name: string, role?: string) => {
+// Agent emoji mapping based on name or role
+const getAgentEmoji = (name: string, role?: string) => {
   const nameLower = name.toLowerCase();
   const roleLower = role?.toLowerCase() || '';
   
-  if (nameLower.includes('research') || roleLower.includes('research')) {
-    return Search;
-  } else if (nameLower.includes('analyst') || roleLower.includes('analy')) {
-    return Microscope;
-  } else if (nameLower.includes('writer') || roleLower.includes('write')) {
-    return FileText;
-  } else if (nameLower.includes('scientist') || roleLower.includes('scien')) {
-    return FlaskConical;
-  } else if (nameLower.includes('think') || roleLower.includes('think')) {
-    return Brain;
-  } else if (nameLower.includes('creative') || roleLower.includes('creat')) {
-    return Lightbulb;
-  } else if (nameLower.includes('discuss') || roleLower.includes('debate')) {
-    return MessageSquare;
-  } else if (nameLower.includes('expert') || roleLower.includes('expert')) {
-    return Sparkles;
+  if (nameLower.includes('validator') || nameLower.includes('input')) {
+    return '🕵️‍♂️';
+  } else if (nameLower.includes('retriever') || nameLower.includes('document')) {
+    return '📚';
+  } else if (nameLower.includes('synthesizer') || nameLower.includes('synthesis')) {
+    return '📝';
+  } else if (nameLower.includes('challenger') || nameLower.includes('review')) {
+    return '🧠';
+  } else if (nameLower.includes('orchestrator') || nameLower.includes('coordinator')) {
+    return '🧑‍⚖️';
+  } else if (nameLower.includes('publisher') || nameLower.includes('archivist')) {
+    return '🔗';
   }
-  return UserCircle;
+  return '👤';
 };
 
 // Agent color mapping
@@ -74,7 +59,7 @@ export const AgentDebateMessage = ({
   className 
 }: AgentDebateMessageProps) => {
   const [isVisible, setIsVisible] = useState(false);
-  const Icon = getAgentIcon(agentName, agentRole);
+  const emoji = getAgentEmoji(agentName, agentRole);
   const agentColor = getAgentColor(agentName);
 
   useEffect(() => {
@@ -106,10 +91,10 @@ export const AgentDebateMessage = ({
       {/* Agent Avatar */}
       <div className="flex-shrink-0">
         <div className={cn(
-          'w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md',
+          'w-10 h-10 rounded-full flex items-center justify-center shadow-md text-lg',
           agentColor
         )}>
-          <Icon className="w-5 h-5" />
+          {emoji}
         </div>
       </div>
 
@@ -147,18 +132,18 @@ export const AgentDebatePanel = ({
         <span className="text-xs text-muted-foreground font-medium">Active Agents:</span>
         <div className="flex -space-x-2">
           {agents.map((agent, index) => {
-            const Icon = getAgentIcon(agent.name, agent.role);
+            const emoji = getAgentEmoji(agent.name, agent.role);
             const color = getAgentColor(agent.name);
             return (
               <div
                 key={`${agent.name}-${index}`}
                 className={cn(
-                  'w-8 h-8 rounded-full flex items-center justify-center text-white shadow-sm border-2 border-background',
+                  'w-8 h-8 rounded-full flex items-center justify-center shadow-sm border-2 border-background text-sm',
                   color
                 )}
                 title={`${agent.name} - ${agent.role}`}
               >
-                <Icon className="w-4 h-4" />
+                {emoji}
               </div>
             );
           })}
