@@ -78,24 +78,23 @@ export function WalletLoginModal({ isOpen, onWalletConnected, onSkip }: WalletLo
 
   return (
     <Dialog open={isOpen}>
-      <DialogContent className="sm:max-w-lg" hideClose>
+      <DialogContent className="w-[95vw] max-w-lg" hideClose>
         <DialogHeader className="text-center space-y-2">
-          <DialogTitle className="text-2xl font-bold">Welcome to Kognys</DialogTitle>
-          <DialogDescription className="text-base text-muted-foreground">
+          <DialogTitle className="text-xl sm:text-2xl font-bold">Welcome to Kognys</DialogTitle>
+          <DialogDescription className="text-sm sm:text-base text-muted-foreground">
             Connect your wallet to register your user in Kognys
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 pt-4">
+        <div className="space-y-3 sm:space-y-4 pt-3 sm:pt-4">
           {error && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs sm:text-sm text-destructive">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               {error}
             </div>
           )}
 
-
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {walletOptions.map((wallet) => {
               const IconComponent = wallet.icon;
               const isConnectingThis = connectingWallet === wallet.id;
@@ -108,36 +107,36 @@ export function WalletLoginModal({ isOpen, onWalletConnected, onSkip }: WalletLo
                   onClick={() => connectWallet(wallet.id)}
                   disabled={isConnecting}
                 >
-                  <div className="flex w-full items-center gap-4 p-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-200">
+                  <div className="flex w-full items-center gap-3 sm:gap-4 p-3 sm:p-4">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-200">
                       {wallet.id === "metamask" ? (
-                        <IconComponent className="h-8 w-8" />
+                        <IconComponent className="h-6 w-6 sm:h-8 sm:w-8" />
                       ) : (
-                        <IconComponent className="h-7 w-7 text-primary" />
+                        <IconComponent className="h-5 w-5 sm:h-7 sm:w-7 text-primary" />
                       )}
                     </div>
                     
-                    <div className="flex-1 text-left">
+                    <div className="flex-1 text-left min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold">
+                        <span className="font-semibold text-sm sm:text-base truncate">
                           {wallet.name}
                         </span>
                         {wallet.isDetected && (
-                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                          <span className="rounded-full bg-green-100 px-1.5 sm:px-2 py-0.5 text-xs font-medium text-green-700 whitespace-nowrap">
                             Detected
                           </span>
                         )}
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-xs sm:text-sm text-muted-foreground truncate">
                         {wallet.description}
                       </div>
                     </div>
                     
-                    <div className="flex items-center">
+                    <div className="flex items-center flex-shrink-0">
                       {isConnectingThis ? (
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-muted-foreground" />
                       ) : (
-                        <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                        <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                       )}
                     </div>
                   </div>
@@ -147,22 +146,22 @@ export function WalletLoginModal({ isOpen, onWalletConnected, onSkip }: WalletLo
           </div>
 
           {isConnecting && (
-            <div className="flex items-center justify-center gap-2 pt-2 text-sm text-muted-foreground">
+            <div className="flex items-center justify-center gap-2 pt-2 text-xs sm:text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Connecting to {connectingWallet}...</span>
             </div>
           )}
 
-          <div className="pt-6 border-t">
-            <div className="text-center space-y-3">
-              <p className="text-xs text-muted-foreground">
+          <div className="pt-4 sm:pt-6 border-t">
+            <div className="text-center space-y-2 sm:space-y-3">
+              <p className="text-xs text-muted-foreground leading-relaxed px-2">
                 ⚠️ Without a wallet, your chats may be lost when you close the browser
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={onSkip}
-                className="bg-yellow-300 border-yellow-400 text-yellow-900 hover:bg-yellow-400 hover:border-yellow-500"
+                className="bg-yellow-300 border-yellow-400 text-yellow-900 hover:bg-yellow-400 hover:border-yellow-500 text-xs sm:text-sm min-h-[36px] sm:min-h-[40px]"
                 disabled={isConnecting}
               >
                 Continue without wallet
