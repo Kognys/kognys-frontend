@@ -1,6 +1,6 @@
 # Kognys Frontend
 
-![Kognys Logo](public/lovable-uploads/88f06cbd-45cf-4d99-aa6e-0c98419665fd.png)
+![Kognys Logo](public/kognys-logo.png)
 
 An AI-powered DeSci (Decentralized Science) hub that provides intelligent research assistance across multiple scientific domains. Built with React, TypeScript, and modern web technologies.
 
@@ -179,7 +179,6 @@ VITE_API_BASE_URL=https://your-api-url.com
 ## 🔗 Related Links
 
 - [Kognys Documentation](https://aicrypto.gitbook.io/kognys-docs/)
-- [Lovable Platform](https://lovable.dev/projects/f50410d7-607f-45ab-bab9-350f4eb06287)
 - [Unibase](https://www.unibase.io/)
 
 ## 📄 License
