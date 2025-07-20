@@ -88,8 +88,7 @@ export function ClaudeSidebar({ isOpen, onToggle }: ClaudeSidebarProps) {
       {/* Sidebar */}
       <div className={cn(
         "fixed left-0 top-0 h-screen w-64 bg-background border-r border-border z-50 transform transition-transform duration-200 ease-in-out",
-        "md:relative md:translate-x-0",
-        isOpen ? "translate-x-0" : "-translate-x-full"
+        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-border/40">

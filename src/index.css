@@ -125,15 +125,94 @@ All colors MUST be HSL.
 }
 
 .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
-  @apply font-inter font-semibold;
+  @apply font-inter font-semibold tracking-tight;
+}
+
+.prose h1 {
+  @apply text-2xl sm:text-3xl mb-6 text-foreground;
+}
+
+.prose h2 {
+  @apply text-xl sm:text-2xl mb-4 mt-8 text-foreground;
+}
+
+.prose h3 {
+  @apply text-lg sm:text-xl mb-3 mt-6 text-foreground/90;
+}
+
+.prose h4 {
+  @apply text-base sm:text-lg mb-2 mt-4 text-foreground/85;
 }
 
 .prose p {
-  @apply leading-relaxed;
+  @apply leading-relaxed mb-4 text-sm sm:text-base;
+}
+
+.prose ul, .prose ol {
+  @apply mb-4 ml-4 sm:ml-6 space-y-2;
+}
+
+.prose li {
+  @apply text-sm sm:text-base leading-relaxed;
+}
+
+.prose ul > li {
+  @apply list-disc list-outside marker:text-muted-foreground/60;
+}
+
+.prose ol > li {
+  @apply list-decimal list-outside marker:text-muted-foreground/60;
+}
+
+.prose strong {
+  @apply font-semibold text-foreground;
+}
+
+.prose em {
+  @apply italic text-foreground/90;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-primary/20 pl-4 italic my-4 text-muted-foreground;
 }
 
 .prose code {
-  @apply font-mono text-sm;
+  @apply font-mono text-sm bg-muted/50 px-1.5 py-0.5 rounded;
+}
+
+.prose pre {
+  @apply bg-muted/30 rounded-lg p-4 overflow-x-auto my-4;
+}
+
+.prose pre code {
+  @apply bg-transparent p-0;
+}
+
+.prose hr {
+  @apply my-8 border-border/50;
+}
+
+/* Nested lists */
+.prose li > ul, .prose li > ol {
+  @apply mt-2 ml-4;
+}
+
+/* Links */
+.prose a {
+  @apply text-primary underline underline-offset-2 hover:text-primary/80 transition-colors;
+}
+
+/* Tables */
+.prose table {
+  @apply w-full my-4 border-collapse;
+}
+
+.prose th {
+  @apply bg-muted/50 font-semibold text-left p-2 border-b border-border;
+}
+
+.prose td {
+  @apply p-2 border-b border-border/50;
 }
 
 /* Cursor typing effect */

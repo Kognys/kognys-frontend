@@ -21,18 +21,13 @@ const Chat = () => {
     if (chatId) {
       let chat = chatStore.getChat(chatId);
       if (!chat) {
-        // Chat doesn't exist, create a new one
-        const newChat = chatStore.createChat();
-        navigate(`/chat/${newChat.id}`, { replace: true });
-        return;
+        // Chat doesn't exist, create it with the current ID
+        chat = chatStore.createChatWithId(chatId);
       }
       setCurrentChat(chat);
-    } else {
-      // No chatId, create new chat and redirect
-      const newChat = chatStore.createChat();
-      navigate(`/chat/${newChat.id}`, { replace: true });
     }
-  }, [chatId, navigate]);
+    // If no chatId, don't redirect - just stay on the current route
+  }, [chatId]);
   const { 
     messages, 
     input, 
@@ -81,7 +76,7 @@ const Chat = () => {
       />
       
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col md:ml-0">
+      <div className="flex-1 flex flex-col md:ml-64 pb-24">
         {/* Header with menu button on mobile */}
         <div className="md:hidden flex items-center justify-between p-4 border-b border-border/40">
           <Button
@@ -99,7 +94,8 @@ const Chat = () => {
         {/* Messages Area */}
         <div className="flex-1 overflow-hidden">
           <ScrollArea className="h-full">
-            <div className="max-w-4xl mx-auto px-6 py-16">
+            <div className="w-full flex justify-center">
+              <div className="w-full max-w-4xl px-6 py-16">
             {messages.length === 0 ? (
               <div className="text-center py-32">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/5 mb-6">
@@ -130,8 +126,19 @@ const Chat = () => {
                         </div>
                         <div className="flex-1">
                           <div className="text-sm font-medium text-muted-foreground/80 mb-3">Kognys Agent</div>
-                          <div className="prose prose-neutral dark:prose-invert prose-lg max-w-none">
-                            <ReactMarkdown>
+                          <div className="prose prose-neutral dark:prose-invert max-w-none">
+                            <ReactMarkdown
+                              components={{
+                                h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-6 mb-3 text-foreground first:mt-0" {...props} />,
+                                h3: ({node, ...props}) => <h3 className="text-base font-semibold mt-4 mb-2 text-foreground/90" {...props} />,
+                                strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
+                                ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 space-y-1.5 mb-4" {...props} />,
+                                ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-5 space-y-1.5 mb-4" {...props} />,
+                                li: ({node, ...props}) => <li className="text-foreground/85 leading-relaxed" {...props} />,
+                                p: ({node, ...props}) => <p className="mb-3 text-foreground/85 leading-relaxed last:mb-0" {...props} />,
+                                blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary/30 pl-4 my-4 italic text-muted-foreground" {...props} />
+                              }}
+                            >
                               {message.content}
                             </ReactMarkdown>
                             {(status === 'streaming' && index === messages.length - 1 && message.content) && (
@@ -164,13 +171,14 @@ const Chat = () => {
                 )}
               </div>
             )}
+              </div>
             </div>
           </ScrollArea>
         </div>
 
-        {/* Chat Input */}
-        <div className="border-t border-border/40 bg-background/60 backdrop-blur-lg">
-          <div className="max-w-4xl mx-auto px-6 py-6">
+        {/* Chat Input - Fixed at bottom */}
+        <div className="fixed bottom-0 left-0 right-0 border-t border-border/40 bg-background/95 backdrop-blur-lg z-10 md:left-64">
+          <div className="max-w-4xl mx-auto px-6 py-4">
             <form onSubmit={handleSubmit} className="relative">
               <div className="relative">
                 <Input
