@@ -3,10 +3,13 @@ import { kognysChatStreamTransport } from '@/lib/kognysChatStreamTransport';
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant' | 'status';
+  role: 'user' | 'assistant' | 'status' | 'agent';
   content: string;
   eventType?: string;
   temporary?: boolean;
+  agentName?: string;
+  agentRole?: string;
+  messageType?: string;
 }
 
 type ChatStatus = 'ready' | 'submitted' | 'streaming' | 'error';
@@ -142,11 +145,38 @@ export function useKognysChat({
           }]);
           
           // Remove status message after a delay (except for certain types)
-          if (!['research_complete', 'error', 'validation_error'].includes(eventType)) {
+          if (!['research_complete', 'error', 'validation_error', 'agent_debate'].includes(eventType)) {
             setTimeout(() => {
               setMessages(prev => prev.filter(msg => msg.id !== statusMessageId));
             }, 5000);
           }
+        },
+        onAgentMessage: (agentName: string, message: string, agentRole?: string, messageType?: string) => {
+          if (!showStatusMessages) return;
+          
+          const agentMessageId = `agent-${Date.now()}-${Math.random()}`;
+          
+          // Add agent message
+          setMessages(prev => [...prev, {
+            id: agentMessageId,
+            role: 'agent' as const,
+            content: message,
+            agentName,
+            agentRole,
+            messageType,
+            temporary: true
+          }]);
+          
+          // Auto-remove agent messages after a delay (except concluding messages)
+          if (messageType !== 'concluding') {
+            setTimeout(() => {
+              setMessages(prev => prev.filter(msg => msg.id !== agentMessageId));
+            }, 6000);
+          }
+        },
+        onAgentDebate: (agents: any[], topic?: string) => {
+          // Optionally show agent debate panel
+          console.log('Agents in debate:', agents, 'Topic:', topic);
         },
         onComplete: (fullResponse: string) => {
           if (abortControllerRef.current?.signal.aborted) return;

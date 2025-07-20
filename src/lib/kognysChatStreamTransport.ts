@@ -13,6 +13,8 @@ interface KognysStreamOptions {
   onComplete?: (fullResponse: string) => void;
   onError?: (error: Error) => void;
   onStatus?: (status: string, eventType: string) => void;
+  onAgentMessage?: (agent: string, message: string, role?: string, messageType?: string) => void;
+  onAgentDebate?: (agents: Array<{name: string; role: string; position?: string}>, topic?: string) => void;
   signal?: AbortSignal;
 }
 
@@ -30,6 +32,8 @@ export class KognysStreamChatTransport {
     onComplete, 
     onError,
     onStatus,
+    onAgentMessage,
+    onAgentDebate,
     signal 
   }: KognysStreamOptions) {
     let retryCount = 0;
@@ -133,6 +137,26 @@ export class KognysStreamChatTransport {
                 // Mark as complete but with validation error
                 onComplete?.(fullResponse);
                 return; // Exit early
+
+              case 'agent_message':
+                onAgentMessage?.(
+                  event.data.agent_name,
+                  event.data.message,
+                  event.data.agent_role,
+                  event.data.message_type
+                );
+                break;
+
+              case 'agent_debate':
+                onAgentDebate?.(
+                  event.data.agents,
+                  event.data.topic
+                );
+                onStatus?.(
+                  `Agents debating: ${event.data.topic || 'research approach'}`,
+                  'agent_debate'
+                );
+                break;
                 
               case 'error':
                 throw new Error(event.data.error || 'Unknown error occurred');

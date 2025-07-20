@@ -77,10 +77,9 @@ export function WalletLoginModal({ isOpen, onWalletConnected, onSkip }: WalletLo
   ];
 
   return (
-    <Dialog open={isOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onSkip()}>
       <DialogContent 
         className="w-[calc(100vw-2rem)] max-w-lg p-4 sm:p-6" 
-        hideClose 
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => {
           e.preventDefault();

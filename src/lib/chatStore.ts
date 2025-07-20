@@ -5,10 +5,13 @@ export interface Chat {
   updatedAt: Date;
   messages: Array<{
     id: string;
-    role: 'user' | 'assistant' | 'status';
+    role: 'user' | 'assistant' | 'status' | 'agent';
     content: string;
     eventType?: string;
     temporary?: boolean;
+    agentName?: string;
+    agentRole?: string;
+    messageType?: string;
   }>;
 }
 

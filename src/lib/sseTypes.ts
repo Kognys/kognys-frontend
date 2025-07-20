@@ -78,6 +78,29 @@ export interface ValidationErrorEvent extends BaseSSEEvent {
   };
 }
 
+export interface AgentMessageEvent extends BaseSSEEvent {
+  event_type: 'agent_message';
+  data: {
+    agent_name: string;
+    agent_role?: string;
+    message: string;
+    message_type?: 'thinking' | 'speaking' | 'analyzing' | 'concluding';
+  };
+}
+
+export interface AgentDebateEvent extends BaseSSEEvent {
+  event_type: 'agent_debate';
+  data: {
+    agents: Array<{
+      name: string;
+      role: string;
+      position?: string;
+    }>;
+    topic?: string;
+    status: string;
+  };
+}
+
 export type SSEEvent = 
   | ResearchStartedEvent
   | QuestionValidatedEvent
@@ -87,7 +110,9 @@ export type SSEEvent =
   | OrchestratorDecisionEvent
   | ResearchCompleteEvent
   | ErrorEvent
-  | ValidationErrorEvent;
+  | ValidationErrorEvent
+  | AgentMessageEvent
+  | AgentDebateEvent;
 
 // Helper function to parse SSE data line
 export function parseSSELine(line: string): SSEEvent | null {

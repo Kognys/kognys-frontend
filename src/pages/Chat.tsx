@@ -10,6 +10,7 @@ import { ClaudeSidebar } from '@/components/ClaudeSidebar';
 import ReactMarkdown from 'react-markdown';
 import { PageLoader } from '@/components/PageLoader';
 import { ResearchStatusMessage } from '@/components/ResearchStatusMessage';
+import { AgentDebateMessage } from '@/components/AgentDebateMessage';
 
 const Chat = () => {
   const location = useLocation();
@@ -144,6 +145,15 @@ const Chat = () => {
                         <ResearchStatusMessage 
                           content={message.content} 
                           eventType={message.eventType}
+                        />
+                      </div>
+                    ) : message.role === 'agent' ? (
+                      <div className="my-3">
+                        <AgentDebateMessage 
+                          agentName={message.agentName || 'Agent'}
+                          agentRole={message.agentRole}
+                          message={message.content}
+                          messageType={message.messageType as any}
                         />
                       </div>
                     ) : (
