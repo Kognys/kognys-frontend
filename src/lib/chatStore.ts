@@ -5,8 +5,10 @@ export interface Chat {
   updatedAt: Date;
   messages: Array<{
     id: string;
-    role: 'user' | 'assistant';
+    role: 'user' | 'assistant' | 'status';
     content: string;
+    eventType?: string;
+    temporary?: boolean;
   }>;
 }
 
@@ -73,6 +75,22 @@ export class ChatStore {
     return chat;
   }
 
+  createChatWithId(id: string, title?: string): Chat {
+    const now = new Date();
+    
+    const chat: Chat = {
+      id,
+      title: title || 'New Chat',
+      createdAt: now,
+      updatedAt: now,
+      messages: []
+    };
+
+    this.chats.set(id, chat);
+    this.saveToStorage();
+    return chat;
+  }
+
   getChat(id: string): Chat | undefined {
     return this.chats.get(id);
   }
@@ -107,6 +125,23 @@ export class ChatStore {
   addMessage(chatId: string, message: Omit<Chat['messages'][0], 'id'>): void {
     const chat = this.chats.get(chatId);
     if (!chat) return;
+
+    // Don't save temporary status messages
+    if (message.temporary) {
+      return;
+    }
+
+    // Check if message already exists (to prevent duplicates)
+    const isDuplicate = chat.messages.some(msg => 
+      msg.role === message.role && 
+      msg.content === message.content &&
+      Math.abs(new Date().getTime() - new Date(chat.updatedAt).getTime()) < 1000 // Within 1 second
+    );
+    
+    if (isDuplicate) {
+      console.log('Skipping duplicate message');
+      return;
+    }
 
     const messageWithId = {
       ...message,

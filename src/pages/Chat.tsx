@@ -9,6 +9,7 @@ import { chatStore, type Chat as ChatType } from '@/lib/chatStore';
 import { ClaudeSidebar } from '@/components/ClaudeSidebar';
 import ReactMarkdown from 'react-markdown';
 import { PageLoader } from '@/components/PageLoader';
+import { ResearchStatusMessage } from '@/components/ResearchStatusMessage';
 
 const Chat = () => {
   const location = useLocation();
@@ -32,6 +33,17 @@ const Chat = () => {
     // If no chatId, don't redirect - just stay on the current route
     setIsInitializing(false);
   }, [chatId]);
+  // Load messages from chat store when currentChat changes
+  const [loadedMessages, setLoadedMessages] = useState<typeof currentChat.messages>([]);
+  
+  useEffect(() => {
+    if (currentChat?.messages) {
+      const nonTempMessages = currentChat.messages.filter(msg => !msg.temporary);
+      console.log('Loading messages from chat store:', nonTempMessages.length, 'messages');
+      setLoadedMessages(nonTempMessages);
+    }
+  }, [currentChat]);
+
   const { 
     messages, 
     input, 
@@ -43,10 +55,10 @@ const Chat = () => {
     isLoading 
   } = useKognysChat({
     throttle: 50,
-    initialMessages: currentChat?.messages || [],
+    initialMessages: loadedMessages,
     onMessage: (message) => {
-      // Save message to chat store
-      if (chatId) {
+      // Save message to chat store (excluding temporary status messages)
+      if (chatId && !message.temporary) {
         chatStore.addMessage(chatId, message);
         // Update current chat state
         const updatedChat = chatStore.getChat(chatId);
@@ -126,6 +138,13 @@ const Chat = () => {
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mt-1">
                           <User className="w-5 h-5 text-primary/70" strokeWidth={1.5} />
                         </div>
+                      </div>
+                    ) : message.role === 'status' ? (
+                      <div className="flex justify-center my-1">
+                        <ResearchStatusMessage 
+                          content={message.content} 
+                          eventType={message.eventType}
+                        />
                       </div>
                     ) : (
                       <div className="flex items-start gap-4">

@@ -1,10 +1,12 @@
-import { useState, useCallback, useRef } from 'react';
-import { kognysChatTransport } from '@/lib/kognysChatTransport';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { kognysChatStreamTransport } from '@/lib/kognysChatStreamTransport';
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'status';
   content: string;
+  eventType?: string;
+  temporary?: boolean;
 }
 
 type ChatStatus = 'ready' | 'submitted' | 'streaming' | 'error';
@@ -14,6 +16,7 @@ interface UseKognysChatOptions {
   throttle?: number;
   onError?: (error: Error) => void;
   onMessage?: (message: Omit<Message, 'id'>) => void;
+  showStatusMessages?: boolean;
 }
 
 interface UseKognysChatReturn {
@@ -36,7 +39,8 @@ export function useKognysChat({
   initialMessages = [],
   throttle = 50,
   onError,
-  onMessage
+  onMessage,
+  showStatusMessages = true
 }: UseKognysChatOptions = {}): UseKognysChatReturn {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
@@ -45,6 +49,11 @@ export function useKognysChat({
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const throttleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update messages when initialMessages changes (e.g., when switching chats)
+  useEffect(() => {
+    setMessages(initialMessages);
+  }, [initialMessages]);
 
   const stop = useCallback(() => {
     if (abortControllerRef.current) {
@@ -94,8 +103,9 @@ export function useKognysChat({
     abortControllerRef.current = new AbortController();
 
     try {
-      await kognysChatTransport.sendMessages({
+      await kognysChatStreamTransport.sendMessages({
         messages: [...messages, userMessage],
+        signal: abortControllerRef.current.signal,
         onChunk: (chunk: string) => {
           if (abortControllerRef.current?.signal.aborted) return;
           
@@ -117,8 +127,32 @@ export function useKognysChat({
             );
           });
         },
+        onStatus: (statusText: string, eventType: string) => {
+          if (!showStatusMessages || abortControllerRef.current?.signal.aborted) return;
+          
+          const statusMessageId = `status-${Date.now()}`;
+          
+          // Add status message
+          setMessages(prev => [...prev, {
+            id: statusMessageId,
+            role: 'status' as const,
+            content: statusText,
+            eventType,
+            temporary: true
+          }]);
+          
+          // Remove status message after a delay (except for certain types)
+          if (!['research_complete', 'error', 'validation_error'].includes(eventType)) {
+            setTimeout(() => {
+              setMessages(prev => prev.filter(msg => msg.id !== statusMessageId));
+            }, 5000);
+          }
+        },
         onComplete: (fullResponse: string) => {
           if (abortControllerRef.current?.signal.aborted) return;
+          
+          // Remove all temporary status messages
+          setMessages(prev => prev.filter(msg => !msg.temporary));
           
           setMessages(prev => {
             // Check if assistant message exists, if not create it
@@ -145,6 +179,9 @@ export function useKognysChat({
           
           console.error('Error generating paper:', error);
           const errorContent = `Sorry, I encountered an error while generating your research paper: ${error.message}. Please try again.`;
+          
+          // Remove all temporary status messages
+          setMessages(prev => prev.filter(msg => !msg.temporary));
           
           setMessages(prev => {
             // Check if assistant message exists, if not create it

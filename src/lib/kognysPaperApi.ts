@@ -1,3 +1,5 @@
+import { SSEEvent, parseSSELine } from './sseTypes';
+
 // User ID management - now uses wallet address
 export const generateUserId = (): string => {
   return `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -35,6 +37,12 @@ export interface ApiError {
     msg: string;
     type: string;
   }>;
+}
+
+export interface StreamCallbacks {
+  onEvent: (event: SSEEvent) => void;
+  onError?: (error: Error) => void;
+  onComplete?: () => void;
 }
 
 // API client
@@ -178,6 +186,141 @@ export class KognysPaperApi {
         timestamp: new Date().toISOString()
       });
       throw error instanceof Error ? error : new Error('Failed to get paper');
+    }
+  }
+
+  /**
+   * Create a paper using the streaming endpoint
+   * Returns an EventSource that streams SSE events
+   */
+  createPaperStream(
+    message: string, 
+    callbacks: StreamCallbacks
+  ): EventSource {
+    const userId = getUserId();
+    
+    console.log('🚀 API Call - Create Paper Stream:', {
+      url: `${this.baseUrl}/papers/stream`,
+      method: 'POST (SSE)',
+      message,
+      userId,
+      timestamp: new Date().toISOString()
+    });
+
+    // Create the request body
+    const requestBody: CreatePaperRequest = {
+      message,
+      user_id: userId
+    };
+
+    // Create EventSource with POST request
+    // Note: Standard EventSource only supports GET, so we'll use fetch with ReadableStream
+    const eventSource = new EventSource(`${this.baseUrl}/papers/stream?${new URLSearchParams({
+      message: message,
+      user_id: userId
+    })}`);
+
+    let buffer = '';
+
+    eventSource.onmessage = (event) => {
+      console.log('📡 SSE Message:', event.data);
+      
+      const sseEvent = parseSSELine(`data: ${event.data}`);
+      if (sseEvent) {
+        callbacks.onEvent(sseEvent);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('❌ SSE Error:', error);
+      eventSource.close();
+      callbacks.onError?.(new Error('Stream connection failed'));
+    };
+
+    eventSource.addEventListener('complete', () => {
+      console.log('✅ SSE Stream Complete');
+      eventSource.close();
+      callbacks.onComplete?.();
+    });
+
+    return eventSource;
+  }
+
+  /**
+   * Alternative streaming implementation using fetch for POST requests
+   */
+  async createPaperStreamPost(
+    message: string,
+    callbacks: StreamCallbacks,
+    signal?: AbortSignal
+  ): Promise<void> {
+    const userId = getUserId();
+    
+    const requestBody: CreatePaperRequest = {
+      message,
+      user_id: userId
+    };
+
+    console.log('🚀 API Call - Create Paper Stream (POST):', {
+      url: `${this.baseUrl}/papers/stream`,
+      method: 'POST',
+      body: requestBody,
+      timestamp: new Date().toISOString()
+    });
+
+    try {
+      const response = await fetch(`${this.baseUrl}/papers/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+        },
+        body: JSON.stringify(requestBody),
+        signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Response body is not readable');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log('✅ Stream Complete');
+          callbacks.onComplete?.();
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (trimmedLine && trimmedLine.startsWith('data: ')) {
+            const event = parseSSELine(trimmedLine);
+            if (event) {
+              callbacks.onEvent(event);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('💥 Stream Error:', error);
+      callbacks.onError?.(error instanceof Error ? error : new Error('Stream failed'));
+      throw error;
     }
   }
 }

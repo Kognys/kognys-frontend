@@ -169,18 +169,16 @@ export function WalletLoginModal({ isOpen, onWalletConnected, onSkip }: WalletLo
               <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed px-1">
                 ⚠️ Without a wallet, your chats may be lost when you close the browser
               </p>
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onSkip();
                 }}
-                className="bg-yellow-300 border-yellow-400 text-yellow-900 hover:bg-yellow-400 hover:border-yellow-500 text-xs sm:text-sm min-h-[36px] sm:min-h-[40px]"
+                className="text-xs text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-4 transition-colors duration-200"
                 disabled={isConnecting}
               >
                 Continue without wallet
-              </Button>
+              </button>
             </div>
           </div>
         </div>
