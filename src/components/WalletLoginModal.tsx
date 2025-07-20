@@ -78,7 +78,7 @@ export function WalletLoginModal({ isOpen, onWalletConnected, onSkip }: WalletLo
 
   return (
     <Dialog open={isOpen}>
-      <DialogContent className="w-[95vw] max-w-lg" hideClose>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-lg p-4 sm:p-6" hideClose>
         <DialogHeader className="text-center space-y-2">
           <DialogTitle className="text-xl sm:text-2xl font-bold">Welcome to Kognys</DialogTitle>
           <DialogDescription className="text-sm sm:text-base text-muted-foreground">
@@ -107,36 +107,36 @@ export function WalletLoginModal({ isOpen, onWalletConnected, onSkip }: WalletLo
                   onClick={() => connectWallet(wallet.id)}
                   disabled={isConnecting}
                 >
-                  <div className="flex w-full items-center gap-3 sm:gap-4 p-3 sm:p-4">
-                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-200">
+                  <div className="flex w-full items-center gap-2 sm:gap-3 p-2.5 sm:p-4">
+                    <div className="flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-200 flex-shrink-0">
                       {wallet.id === "metamask" ? (
-                        <IconComponent className="h-6 w-6 sm:h-8 sm:w-8" />
+                        <IconComponent className="h-5 w-5 sm:h-8 sm:w-8" />
                       ) : (
-                        <IconComponent className="h-5 w-5 sm:h-7 sm:w-7 text-primary" />
+                        <IconComponent className="h-4 w-4 sm:h-7 sm:w-7 text-primary" />
                       )}
                     </div>
                     
                     <div className="flex-1 text-left min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm sm:text-base truncate">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-sm sm:text-base">
                           {wallet.name}
                         </span>
                         {wallet.isDetected && (
-                          <span className="rounded-full bg-green-100 px-1.5 sm:px-2 py-0.5 text-xs font-medium text-green-700 whitespace-nowrap">
+                          <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] sm:text-xs font-medium text-green-700 whitespace-nowrap">
                             Detected
                           </span>
                         )}
                       </div>
-                      <div className="text-xs sm:text-sm text-muted-foreground truncate">
+                      <div className="text-[11px] sm:text-sm text-muted-foreground line-clamp-1">
                         {wallet.description}
                       </div>
                     </div>
                     
-                    <div className="flex items-center flex-shrink-0">
+                    <div className="flex items-center flex-shrink-0 ml-1">
                       {isConnectingThis ? (
-                        <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-muted-foreground" />
+                        <Loader2 className="h-3.5 w-3.5 sm:h-5 sm:w-5 animate-spin text-muted-foreground" />
                       ) : (
-                        <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                        <ArrowRight className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-muted-foreground" />
                       )}
                     </div>
                   </div>
@@ -154,7 +154,7 @@ export function WalletLoginModal({ isOpen, onWalletConnected, onSkip }: WalletLo
 
           <div className="pt-4 sm:pt-6 border-t">
             <div className="text-center space-y-2 sm:space-y-3">
-              <p className="text-xs text-muted-foreground leading-relaxed px-2">
+              <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed px-1">
                 ⚠️ Without a wallet, your chats may be lost when you close the browser
               </p>
               <Button
