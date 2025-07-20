@@ -78,7 +78,15 @@ export function WalletLoginModal({ isOpen, onWalletConnected, onSkip }: WalletLo
 
   return (
     <Dialog open={isOpen}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-lg p-4 sm:p-6" hideClose>
+      <DialogContent 
+        className="w-[calc(100vw-2rem)] max-w-lg p-4 sm:p-6" 
+        hideClose 
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          // Focus will be handled by the parent component after modal closes
+        }}
+      >
         <DialogHeader className="text-center space-y-2">
           <DialogTitle className="text-xl sm:text-2xl font-bold">Welcome to Kognys</DialogTitle>
           <DialogDescription className="text-sm sm:text-base text-muted-foreground">
@@ -104,8 +112,12 @@ export function WalletLoginModal({ isOpen, onWalletConnected, onSkip }: WalletLo
                   key={wallet.id}
                   variant="outline"
                   className="group relative h-auto w-full p-0 hover:bg-background hover:text-foreground before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-transparent hover:before:bg-orange-500 before:transition-colors before:duration-150"
-                  onClick={() => connectWallet(wallet.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    connectWallet(wallet.id);
+                  }}
                   disabled={isConnecting}
+                  autoFocus={false}
                 >
                   <div className="flex w-full items-center gap-2 sm:gap-3 p-2.5 sm:p-4">
                     <div className="flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-200 flex-shrink-0">
@@ -160,7 +172,10 @@ export function WalletLoginModal({ isOpen, onWalletConnected, onSkip }: WalletLo
               <Button
                 variant="outline"
                 size="sm"
-                onClick={onSkip}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSkip();
+                }}
                 className="bg-yellow-300 border-yellow-400 text-yellow-900 hover:bg-yellow-400 hover:border-yellow-500 text-xs sm:text-sm min-h-[36px] sm:min-h-[40px]"
                 disabled={isConnecting}
               >
