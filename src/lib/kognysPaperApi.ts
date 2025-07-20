@@ -1,4 +1,4 @@
-// User ID management
+// User ID management - now uses wallet address
 export const generateUserId = (): string => {
   return `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
@@ -6,10 +6,16 @@ export const generateUserId = (): string => {
 export const getUserId = (): string => {
   let userId = localStorage.getItem('kognys_user_id');
   if (!userId) {
+    // This should only happen if wallet is not connected
+    // In practice, the app should require wallet connection first
     userId = generateUserId();
     localStorage.setItem('kognys_user_id', userId);
   }
   return userId;
+};
+
+export const setUserId = (userId: string): void => {
+  localStorage.setItem('kognys_user_id', userId);
 };
 
 // API types based on the OpenAPI spec
