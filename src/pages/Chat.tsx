@@ -8,6 +8,7 @@ import { useKognysChat } from '@/hooks/useKognysChat';
 import { chatStore, type Chat as ChatType } from '@/lib/chatStore';
 import { ClaudeSidebar } from '@/components/ClaudeSidebar';
 import ReactMarkdown from 'react-markdown';
+import { PageLoader } from '@/components/PageLoader';
 
 const Chat = () => {
   const location = useLocation();
@@ -15,9 +16,11 @@ const Chat = () => {
   const navigate = useNavigate();
   const [currentChat, setCurrentChat] = useState<ChatType | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // Initialize or get existing chat
   useEffect(() => {
+    setIsInitializing(true);
     if (chatId) {
       let chat = chatStore.getChat(chatId);
       if (!chat) {
@@ -27,6 +30,7 @@ const Chat = () => {
       setCurrentChat(chat);
     }
     // If no chatId, don't redirect - just stay on the current route
+    setIsInitializing(false);
   }, [chatId]);
   const { 
     messages, 
@@ -66,6 +70,10 @@ const Chat = () => {
       }, 100);
     }
   }, [location.state, messages.length, setInput]);
+
+  if (isInitializing) {
+    return <PageLoader />;
+  }
 
   return (
     <div className="min-h-screen bg-background font-inter flex">

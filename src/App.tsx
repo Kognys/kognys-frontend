@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,11 +17,15 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
-  const { isConnected } = useWallet();
-  const [hasSkippedWallet, setHasSkippedWallet] = useState(false);
+  const { isConnected, isLoading } = useWallet();
+  const [hasSkippedWallet, setHasSkippedWallet] = useState(() => {
+    // Initialize from localStorage
+    return localStorage.getItem("kognys_wallet_skipped") === "true";
+  });
   const navigate = useNavigate();
   const location = useLocation();
-  const showModal = !isConnected && !hasSkippedWallet;
+  // Disable automatic modal - now using manual LoginButton
+  const showModal = false;
 
   const refreshCurrentRoute = () => {
     // Soft refresh by navigating to the same route
@@ -36,17 +40,31 @@ const AppContent = () => {
   };
 
   const handleWalletConnected = (address: string) => {
+    // Clear the skip state when wallet is connected
+    localStorage.removeItem("kognys_wallet_skipped");
+    setHasSkippedWallet(false);
     setUserId(address);
     refreshCurrentRoute();
   };
 
   const handleSkipWallet = () => {
     setHasSkippedWallet(true);
+    // Persist the skip decision
+    localStorage.setItem("kognys_wallet_skipped", "true");
     // Generate a temporary user ID for users without wallet
-    const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     setUserId(tempUserId);
     refreshCurrentRoute();
   };
+
+  // Show loading state while checking wallet connection
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -55,13 +73,19 @@ const AppContent = () => {
         onWalletConnected={handleWalletConnected}
         onSkip={handleSkipWallet}
       />
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/chat" element={<SimpleChatPage />} />
-        <Route path="/chat/:chatId" element={<Chat />} />
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      }>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/chat" element={<SimpleChatPage />} />
+          <Route path="/chat/:chatId" element={<Chat />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </>
   );
 };

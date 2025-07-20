@@ -4,6 +4,7 @@ interface WalletState {
   address: string | null;
   isConnected: boolean;
   isConnecting: boolean;
+  isLoading: boolean;
 }
 
 export function useWallet() {
@@ -11,6 +12,7 @@ export function useWallet() {
     address: null,
     isConnected: false,
     isConnecting: false,
+    isLoading: true,
   });
 
   useEffect(() => {
@@ -30,7 +32,10 @@ export function useWallet() {
   }, []);
 
   const checkConnection = async () => {
-    if (!window.ethereum) return;
+    if (!window.ethereum) {
+      setWalletState(prev => ({ ...prev, isLoading: false }));
+      return;
+    }
 
     try {
       const accounts = await window.ethereum.request({
@@ -42,12 +47,16 @@ export function useWallet() {
           address: accounts[0],
           isConnected: true,
           isConnecting: false,
+          isLoading: false,
         });
         
         localStorage.setItem("kognys_user_id", accounts[0]);
+      } else {
+        setWalletState(prev => ({ ...prev, isLoading: false }));
       }
     } catch (error) {
       console.error("Error checking wallet connection:", error);
+      setWalletState(prev => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -59,6 +68,7 @@ export function useWallet() {
         address: accounts[0],
         isConnected: true,
         isConnecting: false,
+        isLoading: false,
       });
       
       localStorage.setItem("kognys_user_id", accounts[0]);
@@ -70,6 +80,7 @@ export function useWallet() {
       address: null,
       isConnected: false,
       isConnecting: false,
+      isLoading: false,
     });
     
     localStorage.removeItem("kognys_user_id");
@@ -93,6 +104,7 @@ export function useWallet() {
           address,
           isConnected: true,
           isConnecting: false,
+          isLoading: false,
         });
         
         localStorage.setItem("kognys_user_id", address);

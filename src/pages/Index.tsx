@@ -2,12 +2,18 @@
 import AnimatedBackground from '@/components/AnimatedBackground';
 import SimpleChat from '@/components/SimpleChat';
 import DynamicText from '@/components/DynamicText';
+import { LoginButton } from '@/components/LoginButton';
 
 const Index = () => {
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Animated Background */}
       <AnimatedBackground />
+      
+      {/* Login Button - Top Right */}
+      <div className="absolute top-4 right-4 z-20">
+        <LoginButton />
+      </div>
       
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex flex-col">

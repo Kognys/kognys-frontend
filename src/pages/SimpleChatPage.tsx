@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, Menu, Edit, BookOpen, Microscope, Dna, Atom, Cpu, FlaskConical } from 'lucide-react';
 import { ClaudeSidebar } from '@/components/ClaudeSidebar';
+import { LoginButton } from '@/components/LoginButton';
 import { chatStore } from '@/lib/chatStore';
 
 const scienceAreas = [
@@ -110,7 +111,12 @@ const SimpleChatPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background font-inter flex">
+    <div className="min-h-screen bg-background font-inter flex relative">
+      {/* Login Button - Top Right */}
+      <div className="absolute top-4 right-4 z-30">
+        <LoginButton />
+      </div>
+      
       {/* Sidebar */}
       <ClaudeSidebar 
         isOpen={sidebarOpen} 
@@ -118,7 +124,7 @@ const SimpleChatPage = () => {
       />
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col md:ml-0">
+      <div className="flex-1 flex flex-col">
         {/* Header with menu button on mobile */}
         <div className="md:hidden flex items-center justify-between p-4 border-b border-border/40">
           <Button
