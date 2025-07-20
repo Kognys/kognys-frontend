@@ -3,9 +3,10 @@ import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Bot, User, StopCircle } from 'lucide-react';
+import { Send, Bot, User, StopCircle, Menu } from 'lucide-react';
 import { useKognysChat } from '@/hooks/useKognysChat';
 import { chatStore, type Chat as ChatType } from '@/lib/chatStore';
+import { ClaudeSidebar } from '@/components/ClaudeSidebar';
 import ReactMarkdown from 'react-markdown';
 
 const Chat = () => {
@@ -13,6 +14,7 @@ const Chat = () => {
   const { chatId } = useParams();
   const navigate = useNavigate();
   const [currentChat, setCurrentChat] = useState<ChatType | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Initialize or get existing chat
   useEffect(() => {
@@ -71,11 +73,33 @@ const Chat = () => {
   }, [location.state, messages.length, setInput]);
 
   return (
-    <div className="min-h-screen bg-background font-inter flex flex-col">
-      {/* Messages Area */}
-      <div className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full">
-          <div className="max-w-4xl mx-auto px-6 py-16">
+    <div className="min-h-screen bg-background font-inter flex">
+      {/* Sidebar */}
+      <ClaudeSidebar 
+        isOpen={sidebarOpen} 
+        onToggle={() => setSidebarOpen(!sidebarOpen)} 
+      />
+      
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col md:ml-0">
+        {/* Header with menu button on mobile */}
+        <div className="md:hidden flex items-center justify-between p-4 border-b border-border/40">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarOpen(true)}
+            className="h-8 w-8 p-0"
+          >
+            <Menu className="h-4 w-4" />
+          </Button>
+          <h1 className="font-medium text-sm">Kognys</h1>
+          <div className="w-8" /> {/* Spacer for centering */}
+        </div>
+        
+        {/* Messages Area */}
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="max-w-4xl mx-auto px-6 py-16">
             {messages.length === 0 ? (
               <div className="text-center py-32">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/5 mb-6">
@@ -140,44 +164,45 @@ const Chat = () => {
                 )}
               </div>
             )}
-          </div>
-        </ScrollArea>
-      </div>
+            </div>
+          </ScrollArea>
+        </div>
 
-      {/* Chat Input */}
-      <div className="border-t border-border/40 bg-background/60 backdrop-blur-lg">
-        <div className="max-w-4xl mx-auto px-6 py-6">
-          <form onSubmit={handleSubmit} className="relative">
-            <div className="relative">
-              <Input
-                value={input}
-                onChange={handleInputChange}
-                placeholder="Ask me anything..."
-                className="w-full h-14 px-6 pr-24 text-base font-light bg-muted/30 border-border/40 rounded-2xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200 placeholder:text-muted-foreground/50"
-                disabled={isLoading}
-              />
-              <div className="absolute right-2 top-2 flex gap-1">
-                {(status === 'streaming' || status === 'submitted') && (
+        {/* Chat Input */}
+        <div className="border-t border-border/40 bg-background/60 backdrop-blur-lg">
+          <div className="max-w-4xl mx-auto px-6 py-6">
+            <form onSubmit={handleSubmit} className="relative">
+              <div className="relative">
+                <Input
+                  value={input}
+                  onChange={handleInputChange}
+                  placeholder="Ask me anything..."
+                  className="w-full h-14 px-6 pr-24 text-base font-light bg-muted/30 border-border/40 rounded-2xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200 placeholder:text-muted-foreground/50"
+                  disabled={isLoading}
+                />
+                <div className="absolute right-2 top-2 flex gap-1">
+                  {(status === 'streaming' || status === 'submitted') && (
+                    <Button 
+                      type="button"
+                      onClick={stop}
+                      className="h-10 w-10 rounded-xl bg-red-500/90 hover:bg-red-500 transition-all duration-200"
+                      size="sm"
+                    >
+                      <StopCircle className="w-4 h-4" strokeWidth={2} />
+                    </Button>
+                  )}
                   <Button 
-                    type="button"
-                    onClick={stop}
-                    className="h-10 w-10 rounded-xl bg-red-500/90 hover:bg-red-500 transition-all duration-200"
+                    type="submit" 
+                    disabled={!input.trim() || isLoading}
+                    className="h-10 w-10 rounded-xl bg-primary/90 hover:bg-primary disabled:opacity-30 transition-all duration-200"
                     size="sm"
                   >
-                    <StopCircle className="w-4 h-4" strokeWidth={2} />
+                    <Send className="w-4 h-4" strokeWidth={2} />
                   </Button>
-                )}
-                <Button 
-                  type="submit" 
-                  disabled={!input.trim() || isLoading}
-                  className="h-10 w-10 rounded-xl bg-primary/90 hover:bg-primary disabled:opacity-30 transition-all duration-200"
-                  size="sm"
-                >
-                  <Send className="w-4 h-4" strokeWidth={2} />
-                </Button>
+                </div>
               </div>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       </div>
     </div>

@@ -1,5 +1,3 @@
-import { toast } from 'sonner';
-
 export interface Chat {
   id: string;
   title: string;
@@ -55,7 +53,6 @@ export class ChatStore {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sortedChats));
     } catch (error) {
       console.error('Error saving chats to storage:', error);
-      toast.error('Failed to save chat history');
     }
   }
 

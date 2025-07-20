@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
 import { kognysChatTransport } from '@/lib/kognysChatTransport';
-import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -137,7 +136,6 @@ export function useKognysChat({
           });
           setStatus('ready');
           setStreamingMessageId(null);
-          toast.success('Research paper generated successfully!');
           
           // Notify parent component about assistant message
           onMessage?.({ role: 'assistant', content: fullResponse });
@@ -164,7 +162,6 @@ export function useKognysChat({
           });
           setStatus('error');
           setStreamingMessageId(null);
-          toast.error('Failed to generate research paper');
           onError?.(error);
         }
       });

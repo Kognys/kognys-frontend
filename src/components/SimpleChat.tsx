@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { chatStore } from '@/lib/chatStore';
 import { ChatInput, ChatInputTextArea, ChatInputSubmit } from './SimpleChatInput';
 import { Button } from '@/components/ui/button';
-import { Edit, BookOpen, Microscope, Dna, Atom, Cpu, FlaskConical } from 'lucide-react';
+import { Edit, BookOpen, Dna, Atom, Cpu, FlaskConical, MessageSquare } from 'lucide-react';
 
 const scienceAreas = [
   {
@@ -147,7 +147,16 @@ const SimpleChat = () => {
           className="text-foreground placeholder:text-muted-foreground min-h-[80px] text-base py-6"
           autoFocus
         />
-        <ChatInputSubmit />
+        <div className="flex gap-2 py-2">
+          <Button
+            onClick={() => navigate('/chat')}
+            className="shrink-0 rounded-full p-2 h-fit border border-border/50 bg-card/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            variant="outline"
+          >
+            <MessageSquare className="h-4 w-4" />
+          </Button>
+          <ChatInputSubmit className="p-2" />
+        </div>
       </ChatInput>
 
       {/* Science Area Buttons */}

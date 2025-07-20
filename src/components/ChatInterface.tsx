@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { kognysPaperApi, getUserId } from '@/lib/kognysPaperApi';
-import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -52,7 +51,6 @@ const ChatInterface = () => {
       };
       
       setMessages(prev => [...prev, botMessage]);
-      toast.success('Research paper generated successfully!');
     } catch (error) {
       console.error('Error generating paper:', error);
       
@@ -64,7 +62,6 @@ const ChatInterface = () => {
       };
       
       setMessages(prev => [...prev, errorMessage]);
-      toast.error('Failed to generate research paper');
     } finally {
       setIsLoading(false);
     }
