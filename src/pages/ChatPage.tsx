@@ -17,21 +17,28 @@ const ChatPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
 
+  console.log('ChatPage render - chatId:', chatId, 'currentChat:', currentChat);
 
   // Initialize or get existing chat
   useEffect(() => {
+    console.log('ChatPage useEffect - chatId:', chatId);
     if (chatId) {
       let chat = chatStore.getChat(chatId);
       if (!chat) {
         // Chat doesn't exist, create a new one with this ID
+        console.log('Chat not found, creating new chat with ID:', chatId);
         const newChat = chatStore.createChat();
+        console.log('Created new chat:', newChat);
         navigate(`/chat/${newChat.id}`, { replace: true });
         return;
       }
+      console.log('Setting current chat:', chat);
       setCurrentChat(chat);
     } else {
       // No chatId, create new chat and redirect
+      console.log('No chatId, creating new chat');
       const newChat = chatStore.createChat();
+      console.log('Created new chat:', newChat);
       navigate(`/chat/${newChat.id}`, { replace: true });
     }
   }, [chatId, navigate]);
@@ -84,6 +91,7 @@ const ChatPage = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
+  console.log('About to render - chatId:', chatId, 'currentChat:', currentChat);
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 flex">

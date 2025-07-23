@@ -60,9 +60,11 @@ export class KognysStreamChatTransport {
           lastUserMessage.content,
         {
           onEvent: (event: SSEEvent) => {
+            console.log('📊 Event:', event.event_type, event);
+            
             // Debug agent events specifically
             if (event.event_type === 'agent_message' || event.event_type === 'agent_debate') {
-              // Agent event detected
+              console.log('🤖 Agent Event Detected:', event);
             }
 
             // Extract agent information from the event
@@ -256,11 +258,11 @@ export class KognysStreamChatTransport {
                 break;
                 
               default:
-                // Unknown event type
+                console.log('⚠️ Unknown event type:', event.event_type, event);
                 // Check if it might be an agent-related event with different naming
                 if (event.data && typeof event.data === 'object') {
                   if ('agent' in event.data || 'agent_name' in event.data) {
-                    // Possible agent event with different structure
+                    console.log('🔍 Possible agent event with different structure:', event);
                   }
                 }
             }

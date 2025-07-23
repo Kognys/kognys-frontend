@@ -40,6 +40,7 @@ const Chat = () => {
   useEffect(() => {
     if (currentChat?.messages) {
       const nonTempMessages = currentChat.messages.filter(msg => !msg.temporary);
+      console.log('Loading messages from chat store:', nonTempMessages.length, 'messages');
       setLoadedMessages(nonTempMessages);
     }
   }, [currentChat]);

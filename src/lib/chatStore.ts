@@ -142,6 +142,7 @@ export class ChatStore {
     );
     
     if (isDuplicate) {
+      console.log('Skipping duplicate message');
       return;
     }
 

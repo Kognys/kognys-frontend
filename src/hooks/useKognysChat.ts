@@ -141,6 +141,7 @@ export function useKognysChat({
             );
             
             if (isDuplicate) {
+              console.log('Skipping duplicate status message:', eventType, statusText);
               return prev;
             }
             
@@ -162,6 +163,8 @@ export function useKognysChat({
           messageTimeouts.current.set(statusMessageId, timeout);
         },
         onAgentMessage: (agentName: string, message: string, agentRole?: string, messageType?: string) => {
+          console.log('🎭 Agent Message Received:', { agentName, message, agentRole, messageType });
+          
           if (!showStatusMessages) return;
           
           // Check if we already have this exact message from the same agent
@@ -177,6 +180,7 @@ export function useKognysChat({
             );
             
             if (isDuplicate) {
+              console.log('Skipping duplicate agent message:', agentName, message);
               return prev;
             }
             
@@ -205,6 +209,7 @@ export function useKognysChat({
         },
         onAgentDebate: (agents: any[], topic?: string) => {
           // Optionally show agent debate panel
+          console.log('Agents in debate:', agents, 'Topic:', topic);
         },
         onComplete: (fullResponse: string) => {
           if (abortControllerRef.current?.signal.aborted) return;

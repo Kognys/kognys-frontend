@@ -57,6 +57,13 @@ export class KognysPaperApi {
       user_id: userId
     };
 
+    console.log('🚀 API Call - Create Paper:', {
+      url: `${this.baseUrl}/papers`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: requestBody,
+      timestamp: new Date().toISOString()
+    });
 
     try {
       const response = await fetch(`${this.baseUrl}/papers`, {
@@ -67,6 +74,13 @@ export class KognysPaperApi {
         body: JSON.stringify(requestBody),
       });
 
+      console.log('📡 API Response - Create Paper:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        url: response.url,
+        timestamp: new Date().toISOString()
+      });
 
       if (!response.ok) {
         const errorData: any = await response.json().catch(() => ({}));
@@ -93,6 +107,10 @@ export class KognysPaperApi {
       }
 
       const data: PaperResponse = await response.json();
+      console.log('✅ API Success Response - Create Paper:', {
+        data,
+        timestamp: new Date().toISOString()
+      });
       
       return data;
     } catch (error) {
@@ -106,6 +124,13 @@ export class KognysPaperApi {
   }
 
   async getPaper(paperId: string): Promise<PaperResponse> {
+    console.log('🚀 API Call - Get Paper:', {
+      url: `${this.baseUrl}/papers/${paperId}`,
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      paperId,
+      timestamp: new Date().toISOString()
+    });
 
     try {
       const response = await fetch(`${this.baseUrl}/papers/${paperId}`, {
@@ -115,6 +140,13 @@ export class KognysPaperApi {
         },
       });
 
+      console.log('📡 API Response - Get Paper:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        url: response.url,
+        timestamp: new Date().toISOString()
+      });
 
       if (!response.ok) {
         const errorData: any = await response.json().catch(() => ({}));
@@ -141,6 +173,10 @@ export class KognysPaperApi {
       }
 
       const data: PaperResponse = await response.json();
+      console.log('✅ API Success Response - Get Paper:', {
+        data,
+        timestamp: new Date().toISOString()
+      });
       
       return data;
     } catch (error) {
@@ -163,6 +199,13 @@ export class KognysPaperApi {
   ): EventSource {
     const userId = getUserId();
     
+    console.log('🚀 API Call - Create Paper Stream:', {
+      url: `${this.baseUrl}/papers/stream`,
+      method: 'POST (SSE)',
+      message,
+      userId,
+      timestamp: new Date().toISOString()
+    });
 
     // Create the request body
     const requestBody: CreatePaperRequest = {
@@ -180,6 +223,8 @@ export class KognysPaperApi {
     let buffer = '';
 
     eventSource.onmessage = (event) => {
+      console.log('📡 SSE Message:', event.data);
+      
       const sseEvent = parseSSELine(`data: ${event.data}`);
       if (sseEvent) {
         callbacks.onEvent(sseEvent);
@@ -193,6 +238,7 @@ export class KognysPaperApi {
     };
 
     eventSource.addEventListener('complete', () => {
+      console.log('✅ SSE Stream Complete');
       eventSource.close();
       callbacks.onComplete?.();
     });
@@ -215,6 +261,12 @@ export class KognysPaperApi {
       user_id: userId
     };
 
+    console.log('🚀 API Call - Create Paper Stream (POST):', {
+      url: `${this.baseUrl}/papers/stream`,
+      method: 'POST',
+      body: requestBody,
+      timestamp: new Date().toISOString()
+    });
 
     try {
       const response = await fetch(`${this.baseUrl}/papers/stream`, {
@@ -244,6 +296,7 @@ export class KognysPaperApi {
         const { done, value } = await reader.read();
         
         if (done) {
+          console.log('✅ Stream Complete');
           callbacks.onComplete?.();
           break;
         }
