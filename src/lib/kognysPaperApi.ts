@@ -47,7 +47,7 @@ export interface StreamCallbacks {
 
 // API client
 export class KognysPaperApi {
-  private baseUrl = 'https://kognys-agents-python-production.up.railway.app';
+  private baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://kognys-agents-python-production.up.railway.app';
 
   async createPaper(message: string): Promise<PaperResponse> {
     const userId = getUserId();
