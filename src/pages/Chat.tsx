@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, User, StopCircle, Menu } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useKognysChat } from '@/hooks/useKognysChat';
 import { chatStore, type Chat as ChatType } from '@/lib/chatStore';
 import { ClaudeSidebar } from '@/components/ClaudeSidebar';
@@ -17,7 +18,15 @@ const Chat = () => {
   const { chatId } = useParams();
   const navigate = useNavigate();
   const [currentChat, setCurrentChat] = useState<ChatType | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    // On desktop, default to open; on mobile, default to closed
+    const isDesktop = window.innerWidth >= 768;
+    const savedState = localStorage.getItem('kognys_sidebar_open');
+    if (savedState !== null) {
+      return JSON.parse(savedState);
+    }
+    return isDesktop;
+  });
   const [isInitializing, setIsInitializing] = useState(true);
 
   // Initialize or get existing chat
@@ -96,19 +105,26 @@ const Chat = () => {
       />
       
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col md:ml-64 pb-24">
-        {/* Header with menu button on mobile */}
-        <div className="md:hidden flex items-center justify-between p-4 border-b border-border/40">
+      <div className={cn(
+        "flex-1 flex flex-col pb-24 transition-all duration-200",
+        sidebarOpen ? "md:ml-64" : "md:ml-0"
+      )}>
+        {/* Header with menu button */}
+        <div className="flex items-center justify-between p-4 border-b border-border/40">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => {
+              const newState = !sidebarOpen;
+              setSidebarOpen(newState);
+              localStorage.setItem('kognys_sidebar_open', JSON.stringify(newState));
+            }}
             className="h-8 w-8 p-0"
           >
             <Menu className="h-4 w-4" />
           </Button>
-          <h1 className="font-medium text-sm">Kognys</h1>
-          <div className="w-8" /> {/* Spacer for centering */}
+          <h1 className="font-medium text-sm md:hidden">Kognys</h1>
+          <div className="w-8 md:hidden" /> {/* Spacer for centering on mobile */}
         </div>
         
         {/* Messages Area */}
@@ -213,7 +229,10 @@ const Chat = () => {
         </div>
 
         {/* Chat Input - Fixed at bottom */}
-        <div className="fixed bottom-0 left-0 right-0 border-t border-border/40 bg-background/95 backdrop-blur-lg z-10 md:left-64">
+        <div className={cn(
+          "fixed bottom-0 left-0 right-0 border-t border-border/40 bg-background/95 backdrop-blur-lg z-10 transition-all duration-200",
+          sidebarOpen ? "md:left-64" : "md:left-0"
+        )}>
           <div className="max-w-4xl mx-auto px-6 py-4">
             <form onSubmit={handleSubmit} className="relative">
               <div className="relative">

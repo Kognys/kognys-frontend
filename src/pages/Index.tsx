@@ -10,28 +10,28 @@ const Index = () => {
       {/* Animated Background */}
       <AnimatedBackground />
       
-      {/* Login Button - Top Right */}
-      <div className="absolute top-4 right-4 z-20">
+      {/* Header - Logo and Login Button */}
+      <header className="absolute top-0 left-0 right-0 z-20 p-4 flex items-center justify-between">
+        {/* Logo - Top Left */}
+        <div className="flex items-center gap-2 animate-fade-in">
+          <img 
+            src="/kognys-logo.png" 
+            alt="Kognys Logo" 
+            className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+          />
+          <span className="text-lg sm:text-xl font-bold text-foreground">
+            Kognys
+          </span>
+        </div>
+        {/* Login Button - Top Right */}
         <LoginButton />
-      </div>
+      </header>
       
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* Hero Section */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
           <div className="text-center max-w-4xl mx-auto mb-8 sm:mb-12">
-            {/* Kognys Branding */}
-            <div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 animate-fade-in">
-              <img 
-                src="/kognys-logo.png" 
-                alt="Kognys Logo" 
-                className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-16 lg:h-16 object-contain"
-              />
-              <span className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">
-                Kognys
-              </span>
-            </div>
-            
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-6 leading-tight">
               <span className="text-foreground">AI-Powered DeSci Hub for </span>
               <br className="hidden sm:block" />
