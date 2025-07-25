@@ -12,6 +12,7 @@ export interface Chat {
     agentName?: string;
     agentRole?: string;
     messageType?: string;
+    transactionHash?: string;
   }>;
 }
 

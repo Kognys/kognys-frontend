@@ -134,6 +134,24 @@ export class KognysStreamChatTransport {
                 }
                 break;
 
+              case 'final_answer_token':
+                // Stream final answer tokens
+                if (event.data.token) {
+                  fullResponse += event.data.token;
+                  onChunk?.(event.data.token);
+                  
+                  // Show orchestrator is finalizing (only once)
+                  if (agentName && fullResponse.length < 100) {
+                    onAgentMessage?.(
+                      agentName === 'orchestrator' ? 'Research Orchestrator' : agentName,
+                      'I\'m finalizing the research findings...',
+                      'Lead Researcher',
+                      'concluding'
+                    );
+                  }
+                }
+                break;
+
               case 'draft_generated':
                 onStatus?.(
                   `Draft generated (${event.data.draft_length} characters)`,
@@ -183,24 +201,26 @@ export class KognysStreamChatTransport {
                 }
                 break;
 
-              case 'research_complete':
+              case 'research_completed':
                 this.currentPaperId = event.data.paper_id;
-                this.currentTransactionHash = event.data.finish_task_txn_hash || null;
-                console.log('Research complete event:', {
-                  paperId: event.data.paper_id,
-                  transactionHash: event.data.finish_task_txn_hash,
-                  fullEvent: event
-                });
+                // Extract hash from verifiable_data
+                const verifiableData = event.data.verifiable_data;
+                this.currentTransactionHash = verifiableData?.finish_task_txn_hash || null;
+                
+                
+                // Extract membase IDs if needed
+                const membaseIds = verifiableData?.membase_kb_storage_receipt?.ids;
+                
                 onStatus?.(
                   'Research complete!',
-                  'research_complete'
+                  'research_completed'
                 );
                 break;
 
               case 'validation_error':
                 // Don't throw error, instead return a helpful message to the user
                 fullResponse = `I couldn't process your question because: ${event.data.error}\n\n💡 **Suggestion:** ${event.data.suggestion}`;
-                onChunk?.(fullResponse);
+                // Don't call onChunk here - let onComplete handle the message
                 onStatus?.(
                   'Question validation failed',
                   'validation_error'
@@ -234,7 +254,7 @@ export class KognysStreamChatTransport {
                 if (agentName === 'challenger') {
                   onAgentMessage?.(
                     'Challenger',
-                    event.data.criticisms || 'Reviewing the draft for improvements...',
+                    `Received ${event.data.criticism_count} criticisms for improvement`,
                     'The Peer Reviewer',
                     'analyzing'
                   );
@@ -273,7 +293,6 @@ export class KognysStreamChatTransport {
             }
           },
           onComplete: () => {
-            console.log('Stream complete, passing transaction hash:', this.currentTransactionHash);
             onComplete?.(fullResponse, this.currentTransactionHash || undefined);
           },
           onError: (error) => {

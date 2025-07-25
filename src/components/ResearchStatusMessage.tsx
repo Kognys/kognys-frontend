@@ -42,7 +42,7 @@ export const ResearchStatusMessage = ({
         return <FileText className="h-4 w-4" />;
       case 'orchestrator_decision':
         return <RefreshCw className="h-4 w-4 animate-spin" />;
-      case 'research_complete':
+      case 'research_completed':
         return <CheckCircle className="h-4 w-4" />;
       case 'validation_error':
         return <AlertCircle className="h-4 w-4" />;
@@ -53,7 +53,7 @@ export const ResearchStatusMessage = ({
 
   const getColorClass = () => {
     switch (eventType) {
-      case 'research_complete':
+      case 'research_completed':
         return 'text-white bg-green-500 border-green-500';
       case 'error':
       case 'validation_error':

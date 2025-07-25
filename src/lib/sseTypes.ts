@@ -3,6 +3,7 @@
 export interface BaseSSEEvent {
   event_type: string;
   timestamp: number;
+  agent?: string;
 }
 
 export interface ResearchStartedEvent extends BaseSSEEvent {
@@ -53,12 +54,25 @@ export interface OrchestratorDecisionEvent extends BaseSSEEvent {
   };
 }
 
-export interface ResearchCompleteEvent extends BaseSSEEvent {
-  event_type: 'research_complete';
+export interface ResearchCompletedEvent extends BaseSSEEvent {
+  event_type: 'research_completed';
   data: {
-    paper_id: string;
+    final_answer: string;
     status: string;
-    finish_task_txn_hash?: string;
+    verifiable_data: {
+      task_id: string;
+      membase_kb_storage_receipt: {
+        success: boolean;
+        ids: string[] | null;
+      };
+      finish_task_txn_hash: string;
+      da_storage_receipt: {
+        id: string;
+        message: string;
+        success: boolean;
+      };
+    };
+    paper_id?: string; // Optional for backward compatibility
   };
 }
 
@@ -102,6 +116,37 @@ export interface AgentDebateEvent extends BaseSSEEvent {
   };
 }
 
+// Additional event types
+export interface FinalAnswerTokenEvent extends BaseSSEEvent {
+  event_type: 'final_answer_token';
+  data: {
+    token: string;
+  };
+}
+
+export interface CriticismTokenEvent extends BaseSSEEvent {
+  event_type: 'criticism_token';
+  data: {
+    token: string;
+  };
+}
+
+export interface CriticismsReceivedEvent extends BaseSSEEvent {
+  event_type: 'criticisms_received';
+  data: {
+    criticism_count: number;
+    status: string;
+  };
+}
+
+export interface HeartbeatEvent extends BaseSSEEvent {
+  event_type: 'heartbeat';
+  data: {
+    status: string;
+    timestamp: number;
+  };
+}
+
 export type SSEEvent = 
   | ResearchStartedEvent
   | QuestionValidatedEvent
@@ -109,11 +154,15 @@ export type SSEEvent =
   | DraftAnswerTokenEvent
   | DraftGeneratedEvent
   | OrchestratorDecisionEvent
-  | ResearchCompleteEvent
+  | ResearchCompletedEvent
   | ErrorEvent
   | ValidationErrorEvent
   | AgentMessageEvent
-  | AgentDebateEvent;
+  | AgentDebateEvent
+  | FinalAnswerTokenEvent
+  | CriticismTokenEvent
+  | CriticismsReceivedEvent
+  | HeartbeatEvent;
 
 // Helper function to parse SSE data line
 export function parseSSELine(line: string): SSEEvent | null {

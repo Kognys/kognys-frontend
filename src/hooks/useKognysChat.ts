@@ -215,11 +215,6 @@ export function useKognysChat({
         onComplete: (fullResponse: string, transactionHash?: string) => {
           if (abortControllerRef.current?.signal.aborted) return;
           
-          console.log('onComplete called with:', { 
-            responseLength: fullResponse.length, 
-            transactionHash,
-            hasHash: !!transactionHash 
-          });
           
           // Clear all timeouts immediately when research is complete
           clearAllTimeouts();
@@ -234,7 +229,6 @@ export function useKognysChat({
             
             // If we have a transaction hash, append it to the content
             if (transactionHash) {
-              console.log('Appending transaction hash to message:', transactionHash);
               finalContent += `\n\n---\n\n**Transaction Hash:** \`${transactionHash}\``;
             }
             
