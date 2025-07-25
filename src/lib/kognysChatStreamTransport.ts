@@ -10,7 +10,7 @@ interface KognysMessage {
 interface KognysStreamOptions {
   messages: KognysMessage[];
   onChunk?: (chunk: string) => void;
-  onComplete?: (fullResponse: string) => void;
+  onComplete?: (fullResponse: string, transactionHash?: string) => void;
   onError?: (error: Error) => void;
   onStatus?: (status: string, eventType: string) => void;
   onAgentMessage?: (agent: string, message: string, role?: string, messageType?: string) => void;
@@ -23,6 +23,7 @@ interface KognysStreamOptions {
  */
 export class KognysStreamChatTransport {
   private currentPaperId: string | null = null;
+  private currentTransactionHash: string | null = null;
   private maxRetries = 3;
   private retryDelay = 1000; // Start with 1 second
 
@@ -184,6 +185,12 @@ export class KognysStreamChatTransport {
 
               case 'research_complete':
                 this.currentPaperId = event.data.paper_id;
+                this.currentTransactionHash = event.data.finish_task_txn_hash || null;
+                console.log('Research complete event:', {
+                  paperId: event.data.paper_id,
+                  transactionHash: event.data.finish_task_txn_hash,
+                  fullEvent: event
+                });
                 onStatus?.(
                   'Research complete!',
                   'research_complete'
@@ -266,7 +273,8 @@ export class KognysStreamChatTransport {
             }
           },
           onComplete: () => {
-            onComplete?.(fullResponse);
+            console.log('Stream complete, passing transaction hash:', this.currentTransactionHash);
+            onComplete?.(fullResponse, this.currentTransactionHash || undefined);
           },
           onError: (error) => {
             console.error('Stream error:', error);
@@ -318,6 +326,13 @@ export class KognysStreamChatTransport {
    */
   getCurrentPaperId(): string | null {
     return this.currentPaperId;
+  }
+
+  /**
+   * Get the current transaction hash if available
+   */
+  getCurrentTransactionHash(): string | null {
+    return this.currentTransactionHash;
   }
 }
 

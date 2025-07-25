@@ -6,6 +6,7 @@ import { Send, Menu, Edit, BookOpen, Microscope, Dna, Atom, Cpu, FlaskConical } 
 import { ClaudeSidebar } from '@/components/ClaudeSidebar';
 import { LoginButton } from '@/components/LoginButton';
 import { chatStore } from '@/lib/chatStore';
+import { cn } from '@/lib/utils';
 
 const scienceAreas = [
   {
@@ -78,7 +79,15 @@ const scienceAreas = [
 
 const SimpleChatPage = () => {
   const [input, setInput] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    // On desktop, default to open; on mobile, default to closed
+    const isDesktop = window.innerWidth >= 768;
+    const savedState = localStorage.getItem('kognys_sidebar_open');
+    if (savedState !== null) {
+      return JSON.parse(savedState);
+    }
+    return isDesktop;
+  });
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -124,19 +133,26 @@ const SimpleChatPage = () => {
       />
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header with menu button on mobile */}
-        <div className="md:hidden flex items-center justify-between p-4 border-b border-border/40">
+      <div className={cn(
+        "flex-1 flex flex-col transition-all duration-200",
+        sidebarOpen ? "md:ml-64" : "md:ml-0"
+      )}>
+        {/* Header with menu button */}
+        <div className="flex items-center justify-between p-4 border-b border-border/40">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => {
+              const newState = !sidebarOpen;
+              setSidebarOpen(newState);
+              localStorage.setItem('kognys_sidebar_open', JSON.stringify(newState));
+            }}
             className="h-8 w-8 p-0"
           >
             <Menu className="h-4 w-4" />
           </Button>
-          <div className="w-8" /> {/* Spacer for centering */}
-          <div className="w-8" /> {/* Spacer for centering */}
+          <div className="w-8 md:hidden" /> {/* Spacer for centering on mobile */}
+          <div className="w-8 md:hidden" /> {/* Spacer for centering on mobile */}
         </div>
         
         {/* Main Chat Area */}

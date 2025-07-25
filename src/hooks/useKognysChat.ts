@@ -10,6 +10,7 @@ interface Message {
   agentName?: string;
   agentRole?: string;
   messageType?: string;
+  transactionHash?: string;
 }
 
 type ChatStatus = 'ready' | 'submitted' | 'streaming' | 'error';
@@ -53,6 +54,7 @@ export function useKognysChat({
   const abortControllerRef = useRef<AbortController | null>(null);
   const throttleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messageTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const accumulatedResponseRef = useRef<string>('');
 
   // Update messages when initialMessages changes (e.g., when switching chats)
   useEffect(() => {
@@ -112,6 +114,9 @@ export function useKognysChat({
 
     // Create abort controller for this request
     abortControllerRef.current = new AbortController();
+    
+    // Reset accumulated response
+    accumulatedResponseRef.current = '';
 
     try {
       await kognysChatStreamTransport.sendMessages({
@@ -123,8 +128,10 @@ export function useKognysChat({
           setStatus('streaming');
           setStreamingMessageId(assistantMessageId);
           
-          // Don't add the assistant message during streaming
-          // We'll add it at the end in onComplete
+          // Accumulate the response but don't display it yet
+          accumulatedResponseRef.current += chunk;
+          
+          // Don't update messages during streaming - wait for onComplete
         },
         onStatus: (statusText: string, eventType: string) => {
           if (!showStatusMessages || abortControllerRef.current?.signal.aborted) return;
@@ -153,7 +160,7 @@ export function useKognysChat({
             }];
           });
           
-          // Remove status message after exactly 5 seconds for all types
+          // Remove status message after exactly 5 seconds
           const timeout = setTimeout(() => {
             setMessages(prev => prev.filter(msg => msg.id !== statusMessageId));
             messageTimeouts.current.delete(statusMessageId);
@@ -193,12 +200,11 @@ export function useKognysChat({
           });
           
           // Auto-remove agent messages after exactly 5 seconds
-          // Only set timeout if message was actually added
           if (messageAdded) {
             const timeout = setTimeout(() => {
               setMessages(prev => prev.filter(msg => msg.id !== agentMessageId));
               messageTimeouts.current.delete(agentMessageId);
-            }, 5000); // Exactly 5 seconds
+            }, 5000);
             
             messageTimeouts.current.set(agentMessageId, timeout);
           }
@@ -206,21 +212,41 @@ export function useKognysChat({
         onAgentDebate: (agents: any[], topic?: string) => {
           // Optionally show agent debate panel
         },
-        onComplete: (fullResponse: string) => {
+        onComplete: (fullResponse: string, transactionHash?: string) => {
           if (abortControllerRef.current?.signal.aborted) return;
+          
+          console.log('onComplete called with:', { 
+            responseLength: fullResponse.length, 
+            transactionHash,
+            hasHash: !!transactionHash 
+          });
           
           // Clear all timeouts immediately when research is complete
           clearAllTimeouts();
           
-          // Remove all temporary messages immediately and add the final assistant message
+          // Add the complete response message
           setMessages(prev => {
-            // Filter out temporary messages and add the final assistant message
+            // Filter out temporary messages when adding the final response
             const filteredMessages = prev.filter(msg => !msg.temporary);
-            return [...filteredMessages, { 
+            
+            // Build the final content
+            let finalContent = fullResponse;
+            
+            // If we have a transaction hash, append it to the content
+            if (transactionHash) {
+              console.log('Appending transaction hash to message:', transactionHash);
+              finalContent += `\n\n---\n\n**Transaction Hash:** \`${transactionHash}\``;
+            }
+            
+            // Add the complete assistant message
+            const assistantMessage: Message = { 
               id: assistantMessageId, 
-              role: 'assistant' as const, 
-              content: fullResponse 
-            }];
+              role: 'assistant', 
+              content: finalContent,
+              transactionHash
+            };
+            
+            return [...filteredMessages, assistantMessage];
           });
           
           setStatus('ready');
@@ -238,7 +264,7 @@ export function useKognysChat({
           // Clear all timeouts on error
           clearAllTimeouts();
           
-          // Remove all temporary status messages and add error message
+          // Add error message and remove temporary messages
           setMessages(prev => {
             const filteredMessages = prev.filter(msg => !msg.temporary);
             return [...filteredMessages, { 

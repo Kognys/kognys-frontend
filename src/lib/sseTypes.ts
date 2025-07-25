@@ -58,6 +58,7 @@ export interface ResearchCompleteEvent extends BaseSSEEvent {
   data: {
     paper_id: string;
     status: string;
+    finish_task_txn_hash?: string;
   };
 }
 

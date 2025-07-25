@@ -63,14 +63,17 @@ const ChatPage = () => {
   // Handle initial message from navigation state
   useEffect(() => {
     const initialMessage = location.state?.initialMessage;
-    if (initialMessage && messages.length === 0 && currentChat) {
+    // Only auto-submit if we have an initial message and this is truly a new chat
+    if (initialMessage && messages.length === 0 && currentChat && (!currentChat.messages || currentChat.messages.length === 0)) {
       setInput(initialMessage);
       // Auto-submit after a short delay
       setTimeout(() => {
         sendMessage({ content: initialMessage });
       }, 100);
+      // Clear the location state to prevent re-submission
+      navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state, messages.length, currentChat, setInput, sendMessage]);
+  }, [location.state, messages.length, currentChat, setInput, sendMessage, navigate, location.pathname]);
 
   const handleSubmit = async () => {
     if (!input.trim() || !chatId) return;

@@ -80,7 +80,8 @@ const Chat = () => {
   
   useEffect(() => {
     const initialMessage = location.state?.initialMessage;
-    if (initialMessage && messages.length === 0) {
+    // Only auto-submit if we have an initial message and this is a new chat (no loaded messages)
+    if (initialMessage && messages.length === 0 && loadedMessages.length === 0 && !isInitializing) {
       setInput(initialMessage);
       // Auto-submit the initial message
       setTimeout(() => {
@@ -89,8 +90,10 @@ const Chat = () => {
           form.dispatchEvent(new Event('submit', { bubbles: true }));
         }
       }, 100);
+      // Clear the location state to prevent re-submission on subsequent navigation
+      navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state, messages.length, setInput]);
+  }, [location.state, messages.length, loadedMessages.length, setInput, isInitializing, navigate, location.pathname]);
 
   if (isInitializing) {
     return <PageLoader />;
