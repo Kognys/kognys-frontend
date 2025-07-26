@@ -127,10 +127,8 @@ const Chat = () => {
     setShowReasoning(newState);
     localStorage.setItem('kognys_show_reasoning', JSON.stringify(newState));
     
-    // Smooth scroll when showing reasoning
-    if (newState) {
-      setTimeout(() => scrollToBottom(), 150);
-    }
+    // Don't auto-scroll when user manually toggles
+    // They might want to read from their current position
   };
 
   // Filter messages based on reasoning visibility
@@ -291,9 +289,6 @@ const Chat = () => {
                               <User className="w-5 h-5 text-primary/70" strokeWidth={1.5} />
                             </div>
                           </div>
-                        ) : message.role === 'status' ? (
-                          // Skip rendering status messages (orange logs)
-                          null
                         ) : message.role === 'agent' ? (
                           <div className="my-3">
                             <AgentDebateMessage 
@@ -325,7 +320,7 @@ const Chat = () => {
                                 >
                                   {message.content}
                                 </ReactMarkdown>
-                                {(status === 'streaming' && index === messages.findIndex(m => m.id === message.id) === messages.length - 1 && message.content) && (
+                                {(status === 'streaming' && messages.findIndex(m => m.id === message.id) === messages.length - 1 && message.content) && (
                                   <span className="inline-block w-0.5 h-5 bg-primary/60 ml-0.5 animate-pulse" />
                                 )}
                               </div>
