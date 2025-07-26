@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
 
 interface AgentDebateMessageProps {
   agentName: string;
@@ -83,7 +84,7 @@ export const AgentDebateMessage = ({
   return (
     <div
       className={cn(
-        'flex items-start gap-3 transition-all duration-300',
+        'flex items-start gap-3 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2',
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2',
         className
       )}
@@ -110,10 +111,21 @@ export const AgentDebateMessage = ({
           )}
         </div>
         <div className={cn(
-          'text-sm text-foreground/90 leading-relaxed',
+          'text-sm text-foreground/90 leading-relaxed prose prose-sm dark:prose-invert max-w-none',
           getMessageTypeStyle()
         )}>
-          {message}
+          <ReactMarkdown
+            components={{
+              p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+              strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
+              ul: ({node, ...props}) => <ul className="list-disc list-inside ml-2 space-y-1 mb-2" {...props} />,
+              ol: ({node, ...props}) => <ol className="list-decimal list-inside ml-2 space-y-1 mb-2" {...props} />,
+              li: ({node, ...props}) => <li className="text-sm" {...props} />,
+              blockquote: ({node, ...props}) => <blockquote className="border-l-2 border-primary/30 pl-2 my-2 italic text-muted-foreground text-sm" {...props} />
+            }}
+          >
+            {message}
+          </ReactMarkdown>
         </div>
       </div>
     </div>

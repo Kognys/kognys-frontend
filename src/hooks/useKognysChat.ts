@@ -53,7 +53,6 @@ export function useKognysChat({
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const throttleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const messageTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const accumulatedResponseRef = useRef<string>('');
 
   // Update messages when initialMessages changes (e.g., when switching chats)
@@ -61,21 +60,14 @@ export function useKognysChat({
     setMessages(initialMessages);
   }, [initialMessages]);
 
-  // Clear all message timeouts
-  const clearAllTimeouts = useCallback(() => {
-    messageTimeouts.current.forEach(timeout => clearTimeout(timeout));
-    messageTimeouts.current.clear();
-  }, []);
-
   const stop = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-    clearAllTimeouts();
     setStatus('ready');
     setStreamingMessageId(null);
-  }, [clearAllTimeouts]);
+  }, []);
 
   const throttledUpdate = useCallback((messageId: string, content: string) => {
     if (throttleTimeoutRef.current) {
@@ -125,6 +117,8 @@ export function useKognysChat({
         onChunk: (chunk: string) => {
           if (abortControllerRef.current?.signal.aborted) return;
           
+          console.log('[useKognysChat] Chunk received:', chunk);
+          
           setStatus('streaming');
           setStreamingMessageId(assistantMessageId);
           
@@ -135,6 +129,8 @@ export function useKognysChat({
         },
         onStatus: (statusText: string, eventType: string) => {
           if (!showStatusMessages || abortControllerRef.current?.signal.aborted) return;
+          
+          console.log('[useKognysChat] Status event:', { statusText, eventType });
           
           const statusMessageId = `status-${Date.now()}`;
           
@@ -159,21 +155,14 @@ export function useKognysChat({
               temporary: true
             }];
           });
-          
-          // Remove status message after exactly 5 seconds
-          const timeout = setTimeout(() => {
-            setMessages(prev => prev.filter(msg => msg.id !== statusMessageId));
-            messageTimeouts.current.delete(statusMessageId);
-          }, 5000);
-          
-          messageTimeouts.current.set(statusMessageId, timeout);
         },
         onAgentMessage: (agentName: string, message: string, agentRole?: string, messageType?: string) => {
           if (!showStatusMessages) return;
           
+          console.log('[useKognysChat] Agent message:', { agentName, message, agentRole, messageType });
+          
           // Check if we already have this exact message from the same agent
           const agentMessageId = `agent-${Date.now()}-${Math.random()}`;
-          let messageAdded = false;
           
           setMessages(prev => {
             const isDuplicate = prev.some(msg => 
@@ -187,7 +176,6 @@ export function useKognysChat({
               return prev;
             }
             
-            messageAdded = true;
             return [...prev, {
               id: agentMessageId,
               role: 'agent' as const,
@@ -198,16 +186,6 @@ export function useKognysChat({
               temporary: true
             }];
           });
-          
-          // Auto-remove agent messages after exactly 5 seconds
-          if (messageAdded) {
-            const timeout = setTimeout(() => {
-              setMessages(prev => prev.filter(msg => msg.id !== agentMessageId));
-              messageTimeouts.current.delete(agentMessageId);
-            }, 5000);
-            
-            messageTimeouts.current.set(agentMessageId, timeout);
-          }
         },
         onAgentDebate: (agents: any[], topic?: string) => {
           // Optionally show agent debate panel
@@ -215,15 +193,14 @@ export function useKognysChat({
         onComplete: (fullResponse: string, transactionHash?: string) => {
           if (abortControllerRef.current?.signal.aborted) return;
           
-          
-          // Clear all timeouts immediately when research is complete
-          clearAllTimeouts();
+          console.log('[useKognysChat] Stream complete:', { 
+            responseLength: fullResponse.length, 
+            transactionHash,
+            preview: fullResponse.substring(0, 100) + '...'
+          });
           
           // Add the complete response message
           setMessages(prev => {
-            // Filter out temporary messages when adding the final response
-            const filteredMessages = prev.filter(msg => !msg.temporary);
-            
             // Build the final content
             let finalContent = fullResponse;
             
@@ -240,7 +217,7 @@ export function useKognysChat({
               transactionHash
             };
             
-            return [...filteredMessages, assistantMessage];
+            return [...prev, assistantMessage];
           });
           
           setStatus('ready');
@@ -255,13 +232,9 @@ export function useKognysChat({
           console.error('Error generating paper:', error);
           const errorContent = `Sorry, I encountered an error while generating your research paper: ${error.message}. Please try again.`;
           
-          // Clear all timeouts on error
-          clearAllTimeouts();
-          
-          // Add error message and remove temporary messages
+          // Add error message
           setMessages(prev => {
-            const filteredMessages = prev.filter(msg => !msg.temporary);
-            return [...filteredMessages, { 
+            return [...prev, { 
               id: assistantMessageId, 
               role: 'assistant' as const, 
               content: errorContent 
@@ -277,7 +250,7 @@ export function useKognysChat({
       if (abortControllerRef.current?.signal.aborted) return;
       
       const err = error instanceof Error ? error : new Error('Unknown error');
-      console.error('Error in sendMessage:', err);
+      console.error('[useKognysChat] Error in sendMessage:', err);
       setStatus('error');
       setStreamingMessageId(null);
       onError?.(err);

@@ -61,9 +61,16 @@ export class KognysStreamChatTransport {
           lastUserMessage.content,
         {
           onEvent: (event: SSEEvent) => {
+            // Log all backend responses
+            console.log('[Backend Response]', {
+              event_type: event.event_type,
+              data: event.data,
+              timestamp: new Date().toISOString()
+            });
+
             // Debug agent events specifically
             if (event.event_type === 'agent_message' || event.event_type === 'agent_debate') {
-              // Agent event detected
+              console.log('[Agent Event]', event);
             }
 
             // Extract agent information from the event
@@ -105,11 +112,30 @@ export class KognysStreamChatTransport {
                   `Retrieved ${event.data.document_count} documents (${documentCount} total)`,
                   'documents_retrieved'
                 );
-                // Show agent message
+                
+                // Show detailed document information
                 if (agentName) {
+                  let documentMessage = `I found ${event.data.document_count} relevant documents for analysis`;
+                  
+                  // Check if we have document details in the event data
+                  if (event.data.documents && Array.isArray(event.data.documents)) {
+                    documentMessage += ':\n\n';
+                    event.data.documents.forEach((doc: any, index: number) => {
+                      documentMessage += `📄 **Document ${index + 1}**: ${doc.title || 'Untitled'}\n`;
+                      if (doc.source) documentMessage += `   Source: ${doc.source}\n`;
+                      if (doc.relevance_score) documentMessage += `   Relevance: ${Math.round(doc.relevance_score * 100)}%\n`;
+                      documentMessage += '\n';
+                    });
+                  } else if (event.data.document_titles && Array.isArray(event.data.document_titles)) {
+                    documentMessage += ':\n\n';
+                    event.data.document_titles.forEach((title: string, index: number) => {
+                      documentMessage += `📄 **Document ${index + 1}**: ${title}\n`;
+                    });
+                  }
+                  
                   onAgentMessage?.(
                     agentName === 'retriever' ? 'Document Retriever' : agentName,
-                    `I found ${event.data.document_count} relevant documents for analysis`,
+                    documentMessage,
                     'Research Specialist',
                     'speaking'
                   );
@@ -119,6 +145,7 @@ export class KognysStreamChatTransport {
               case 'draft_answer_token':
                 // Stream content tokens
                 if (event.data.token) {
+                  console.log('[Content Token - Draft]', event.data.token);
                   fullResponse += event.data.token;
                   onChunk?.(event.data.token);
                   
@@ -137,6 +164,7 @@ export class KognysStreamChatTransport {
               case 'final_answer_token':
                 // Stream final answer tokens
                 if (event.data.token) {
+                  console.log('[Content Token - Final]', event.data.token);
                   fullResponse += event.data.token;
                   onChunk?.(event.data.token);
                   
@@ -157,11 +185,22 @@ export class KognysStreamChatTransport {
                   `Draft generated (${event.data.draft_length} characters)`,
                   'draft_generated'
                 );
-                // Show agent message
+                // Show detailed draft information
                 if (agentName) {
+                  let draftMessage = `I've completed a draft with ${event.data.draft_length} characters of analysis`;
+                  
+                  if (event.data.sections && Array.isArray(event.data.sections)) {
+                    draftMessage += '. The draft includes:\n\n';
+                    event.data.sections.forEach((section: any) => {
+                      draftMessage += `📝 ${section.title || section}\n`;
+                    });
+                  } else if (event.data.summary) {
+                    draftMessage += `\n\n**Summary**: ${event.data.summary}`;
+                  }
+                  
                   onAgentMessage?.(
                     agentName === 'synthesizer' ? 'Research Synthesizer' : agentName,
-                    `I've completed a draft with ${event.data.draft_length} characters of analysis`,
+                    draftMessage,
                     'Content Specialist',
                     'concluding'
                   );
@@ -230,6 +269,15 @@ export class KognysStreamChatTransport {
                 return; // Exit early
 
               case 'agent_message':
+                // Log detailed agent message data
+                console.log('[Agent Message Detail]', {
+                  agent_name: event.data.agent_name,
+                  message: event.data.message,
+                  agent_role: event.data.agent_role,
+                  message_type: event.data.message_type,
+                  full_data: event.data
+                });
+                
                 onAgentMessage?.(
                   event.data.agent_name,
                   event.data.message,
@@ -250,11 +298,30 @@ export class KognysStreamChatTransport {
                 break;
                 
               case 'criticisms_received':
-                // Handle Challenger agent feedback
-                if (agentName === 'challenger') {
+                // Handle Challenger agent feedback with details
+                if (agentName === 'challenger' || event.data.agent === 'challenger') {
+                  let criticismMessage = `I've reviewed the draft and identified ${event.data.criticism_count} areas for improvement`;
+                  
+                  // Check if we have detailed criticisms
+                  if (event.data.criticisms && Array.isArray(event.data.criticisms)) {
+                    criticismMessage += ':\n\n';
+                    event.data.criticisms.forEach((criticism: any, index: number) => {
+                      criticismMessage += `🔍 **Issue ${index + 1}**: ${criticism.issue || criticism}\n`;
+                      if (criticism.suggestion) {
+                        criticismMessage += `   💡 Suggestion: ${criticism.suggestion}\n`;
+                      }
+                      if (criticism.severity) {
+                        criticismMessage += `   ⚡ Severity: ${criticism.severity}\n`;
+                      }
+                      criticismMessage += '\n';
+                    });
+                  } else if (event.data.criticism_summary) {
+                    criticismMessage += `:\n\n${event.data.criticism_summary}`;
+                  }
+                  
                   onAgentMessage?.(
                     'Challenger',
-                    `Received ${event.data.criticism_count} criticisms for improvement`,
+                    criticismMessage,
                     'The Peer Reviewer',
                     'analyzing'
                   );
@@ -293,6 +360,12 @@ export class KognysStreamChatTransport {
             }
           },
           onComplete: () => {
+            console.log('[Stream Complete]', {
+              fullResponse: fullResponse.substring(0, 200) + '...',
+              transactionHash: this.currentTransactionHash,
+              paperId: this.currentPaperId,
+              responseLength: fullResponse.length
+            });
             onComplete?.(fullResponse, this.currentTransactionHash || undefined);
           },
           onError: (error) => {

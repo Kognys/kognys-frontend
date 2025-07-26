@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,8 @@ import { chatStore, type Chat as ChatType } from '@/lib/chatStore';
 import { ClaudeSidebar } from '@/components/ClaudeSidebar';
 import ReactMarkdown from 'react-markdown';
 import { PageLoader } from '@/components/PageLoader';
-import { ResearchStatusMessage } from '@/components/ResearchStatusMessage';
 import { AgentDebateMessage } from '@/components/AgentDebateMessage';
+import { ReasoningToggle } from '@/components/ReasoningToggle';
 
 const Chat = () => {
   const location = useLocation();
@@ -28,6 +28,15 @@ const Chat = () => {
     return isDesktop;
   });
   const [isInitializing, setIsInitializing] = useState(true);
+  const [showReasoning, setShowReasoning] = useState(() => {
+    const savedState = localStorage.getItem('kognys_show_reasoning');
+    return savedState !== null ? JSON.parse(savedState) : true;
+  });
+  
+  // Refs for scrolling
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastMessageCountRef = useRef(0);
 
   // Initialize or get existing chat
   useEffect(() => {
@@ -58,7 +67,7 @@ const Chat = () => {
     input, 
     status, 
     handleInputChange, 
-    handleSubmit, 
+    handleSubmit: originalHandleSubmit, 
     setInput,
     stop,
     isLoading 
@@ -78,6 +87,13 @@ const Chat = () => {
     }
   });
   
+  // Wrap handleSubmit to add scrolling
+  const handleSubmit = async (e: React.FormEvent) => {
+    await originalHandleSubmit(e);
+    // Scroll to bottom when submitting
+    setTimeout(() => scrollToBottom(), 100);
+  };
+  
   useEffect(() => {
     const initialMessage = location.state?.initialMessage;
     // Only auto-submit if we have an initial message and this is a new chat (no loaded messages)
@@ -94,6 +110,78 @@ const Chat = () => {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state, messages.length, loadedMessages.length, setInput, isInitializing, navigate, location.pathname]);
+
+  // Auto-hide reasoning when streaming completes
+  useEffect(() => {
+    if (status === 'ready' && messages.some(msg => msg.role === 'agent')) {
+      // Auto-hide reasoning when a response is complete
+      setShowReasoning(false);
+    } else if (status === 'streaming' || status === 'submitted') {
+      // Auto-show reasoning when starting a new request
+      setShowReasoning(true);
+    }
+  }, [status, messages]);
+
+  const toggleReasoning = () => {
+    const newState = !showReasoning;
+    setShowReasoning(newState);
+    localStorage.setItem('kognys_show_reasoning', JSON.stringify(newState));
+    
+    // Smooth scroll when showing reasoning
+    if (newState) {
+      setTimeout(() => scrollToBottom(), 150);
+    }
+  };
+
+  // Filter messages based on reasoning visibility
+  const visibleMessages = messages.filter(msg => {
+    // Always hide status messages (orange logs)
+    if (msg.role === 'status') {
+      return false;
+    }
+    // Hide agent messages if reasoning is hidden
+    if (msg.role === 'agent' && !showReasoning) {
+      return false;
+    }
+    return true;
+  });
+
+  // Smooth scroll to bottom function
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+    }
+  };
+
+  // Auto-scroll when new messages arrive
+  useEffect(() => {
+    // Check if we have new messages
+    if (messages.length > lastMessageCountRef.current) {
+      // Only auto-scroll if user is near the bottom or if it's a reasoning message
+      const shouldScroll = () => {
+        if (!scrollAreaRef.current) return true;
+        
+        const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (!scrollContainer) return true;
+        
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+        
+        // Always scroll for agent messages when visible
+        const lastMessage = messages[messages.length - 1];
+        const isAgentMessage = lastMessage && lastMessage.role === 'agent';
+        
+        return isNearBottom || (isAgentMessage && showReasoning);
+      };
+      
+      if (shouldScroll()) {
+        // Use a small delay to ensure DOM has updated
+        setTimeout(() => scrollToBottom(), 100);
+      }
+    }
+    
+    lastMessageCountRef.current = messages.length;
+  }, [messages, showReasoning]);
 
   if (isInitializing) {
     return <PageLoader />;
@@ -132,10 +220,10 @@ const Chat = () => {
         
         {/* Messages Area */}
         <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-full">
+          <ScrollArea ref={scrollAreaRef} className="h-full">
             <div className="w-full flex justify-center">
               <div className="w-full max-w-4xl px-6 py-16">
-            {messages.length === 0 ? (
+            {visibleMessages.length === 0 ? (
               <div className="text-center py-32">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/5 mb-6">
                   <Bot className="w-8 h-8 text-primary/60" strokeWidth={1.5} />
@@ -144,67 +232,111 @@ const Chat = () => {
               </div>
             ) : (
               <div className="space-y-12">
-                {messages.map((message, index) => (
-                  <div key={message.id} className="group">
-                    {message.role === 'user' ? (
-                      <div className="flex items-start gap-4 justify-end">
-                        <div className="text-right">
-                          <div className="inline-block text-sm font-medium text-primary/80 mb-2">You</div>
-                          <div className="text-foreground/90 text-lg font-medium leading-relaxed">
-                            {message.content}
+                
+                {(() => {
+                  let toggleShown = false;
+                  
+                  return messages.map((message, index) => {
+                    // Skip rendering status messages entirely
+                    if (message.role === 'status') {
+                      return null;
+                    }
+                    
+                    // Check if this is the very first agent message
+                    const isFirstAgentMessage = message.role === 'agent' && 
+                      !messages.slice(0, index).some(m => m.role === 'agent');
+                    
+                    // Skip rendering if it's an agent message and reasoning is hidden
+                    if (message.role === 'agent' && !showReasoning) {
+                      // Show toggle only for the very first agent message when hidden
+                      if (isFirstAgentMessage && !toggleShown) {
+                        toggleShown = true;
+                        return (
+                          <div key={`toggle-${message.id}`} className="flex justify-center my-4">
+                            <ReasoningToggle
+                              isVisible={showReasoning}
+                              onToggle={toggleReasoning}
+                            />
                           </div>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mt-1">
-                          <User className="w-5 h-5 text-primary/70" strokeWidth={1.5} />
-                        </div>
-                      </div>
-                    ) : message.role === 'status' ? (
-                      <div className="flex justify-center my-1">
-                        <ResearchStatusMessage 
-                          content={message.content} 
-                          eventType={message.eventType}
-                        />
-                      </div>
-                    ) : message.role === 'agent' ? (
-                      <div className="my-3">
-                        <AgentDebateMessage 
-                          agentName={message.agentName || 'Agent'}
-                          agentRole={message.agentRole}
-                          message={message.content}
-                          messageType={message.messageType as any}
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center mt-1">
-                          <Bot className="w-5 h-5 text-muted-foreground/70" strokeWidth={1.5} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-muted-foreground/80 mb-3">Kognys Agent</div>
-                          <div className="prose prose-neutral dark:prose-invert max-w-none">
-                            <ReactMarkdown
-                              components={{
-                                h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-6 mb-3 text-foreground first:mt-0" {...props} />,
-                                h3: ({node, ...props}) => <h3 className="text-base font-semibold mt-4 mb-2 text-foreground/90" {...props} />,
-                                strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
-                                ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 space-y-1.5 mb-4" {...props} />,
-                                ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-5 space-y-1.5 mb-4" {...props} />,
-                                li: ({node, ...props}) => <li className="text-foreground/85 leading-relaxed" {...props} />,
-                                p: ({node, ...props}) => <p className="mb-3 text-foreground/85 leading-relaxed last:mb-0" {...props} />,
-                                blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary/30 pl-4 my-4 italic text-muted-foreground" {...props} />
-                              }}
-                            >
-                              {message.content}
-                            </ReactMarkdown>
-                            {(status === 'streaming' && index === messages.length - 1 && message.content) && (
-                              <span className="inline-block w-0.5 h-5 bg-primary/60 ml-0.5 animate-pulse" />
-                            )}
+                        );
+                      }
+                      return null;
+                    }
+                    
+                    return (
+                      <React.Fragment key={message.id}>
+                        {/* Show toggle only before the very first agent message when visible */}
+                        {isFirstAgentMessage && message.role === 'agent' && !toggleShown && (() => {
+                          toggleShown = true;
+                          return (
+                            <div className="flex justify-center my-4">
+                              <ReasoningToggle
+                                isVisible={showReasoning}
+                                onToggle={toggleReasoning}
+                              />
+                            </div>
+                          );
+                        })()}
+                        
+                        <div className="group transition-all duration-300">
+                        {message.role === 'user' ? (
+                          <div className="flex items-start gap-4 justify-end">
+                            <div className="text-right">
+                              <div className="inline-block text-sm font-medium text-primary/80 mb-2">You</div>
+                              <div className="text-foreground/90 text-lg font-medium leading-relaxed">
+                                {message.content}
+                              </div>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mt-1">
+                              <User className="w-5 h-5 text-primary/70" strokeWidth={1.5} />
+                            </div>
                           </div>
-                        </div>
+                        ) : message.role === 'status' ? (
+                          // Skip rendering status messages (orange logs)
+                          null
+                        ) : message.role === 'agent' ? (
+                          <div className="my-3">
+                            <AgentDebateMessage 
+                              agentName={message.agentName || 'Agent'}
+                              agentRole={message.agentRole}
+                              message={message.content}
+                              messageType={message.messageType as 'thinking' | 'speaking' | 'analyzing' | 'concluding' | undefined}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center mt-1">
+                              <Bot className="w-5 h-5 text-muted-foreground/70" strokeWidth={1.5} />
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-muted-foreground/80 mb-3">Kognys Agent</div>
+                              <div className="prose prose-neutral dark:prose-invert max-w-none">
+                                <ReactMarkdown
+                                  components={{
+                                    h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-6 mb-3 text-foreground first:mt-0" {...props} />,
+                                    h3: ({node, ...props}) => <h3 className="text-base font-semibold mt-4 mb-2 text-foreground/90" {...props} />,
+                                    strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
+                                    ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 space-y-1.5 mb-4" {...props} />,
+                                    ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-5 space-y-1.5 mb-4" {...props} />,
+                                    li: ({node, ...props}) => <li className="text-foreground/85 leading-relaxed" {...props} />,
+                                    p: ({node, ...props}) => <p className="mb-3 text-foreground/85 leading-relaxed last:mb-0" {...props} />,
+                                    blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary/30 pl-4 my-4 italic text-muted-foreground" {...props} />
+                                  }}
+                                >
+                                  {message.content}
+                                </ReactMarkdown>
+                                {(status === 'streaming' && index === messages.findIndex(m => m.id === message.id) === messages.length - 1 && message.content) && (
+                                  <span className="inline-block w-0.5 h-5 bg-primary/60 ml-0.5 animate-pulse" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                    </React.Fragment>
+                  );
+                });
+                })()}
                 
                 {(status === 'submitted' || status === 'streaming') && (
                   <div className="flex items-start gap-4">
@@ -226,6 +358,8 @@ const Chat = () => {
                 )}
               </div>
             )}
+              {/* Scroll anchor */}
+              <div ref={messagesEndRef} className="h-4" />
               </div>
             </div>
           </ScrollArea>

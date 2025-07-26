@@ -66,7 +66,7 @@ export const ResearchStatusMessage = ({
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium shadow-sm transition-all duration-300',
+        'inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium shadow-sm transition-all duration-300 animate-in fade-in slide-in-from-top-2',
         getColorClass(),
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2',
         className
