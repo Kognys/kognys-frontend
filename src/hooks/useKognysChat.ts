@@ -45,9 +45,25 @@ export function useKognysChat({
   const abortControllerRef = useRef<AbortController | null>(null);
   const throttleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const accumulatedResponseRef = useRef<string>('');
+  const chatInstanceIdRef = useRef<string>(Date.now().toString());
 
   // Update messages when initialMessages changes (e.g., when switching chats)
   useEffect(() => {
+    // Stop any ongoing operations when switching chats
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
+    // Reset state
+    setStatus('ready');
+    setStreamingMessageId(null);
+    accumulatedResponseRef.current = '';
+    
+    // Generate new instance ID to prevent cross-chat contamination
+    chatInstanceIdRef.current = Date.now().toString();
+    
+    // Set new messages
     setMessages(initialMessages);
   }, [initialMessages]);
 
@@ -101,6 +117,9 @@ export function useKognysChat({
     
     // Reset accumulated response
     accumulatedResponseRef.current = '';
+    
+    // Capture current instance ID to prevent cross-chat contamination
+    const currentInstanceId = chatInstanceIdRef.current;
 
     try {
       await kognysChatStreamTransport.sendMessages({
@@ -109,18 +128,28 @@ export function useKognysChat({
         onChunk: (chunk: string) => {
           if (abortControllerRef.current?.signal.aborted) return;
           
+          // Check if this response belongs to the current chat instance
+          if (currentInstanceId !== chatInstanceIdRef.current) {
+            console.log('[useKognysChat] Ignoring chunk from different chat instance');
+            return;
+          }
+          
           console.log('[useKognysChat] Chunk received:', chunk);
           
           setStatus('streaming');
           setStreamingMessageId(assistantMessageId);
           
-          // Accumulate the response but don't display it yet
+          // Just accumulate the response, don't display it yet
           accumulatedResponseRef.current += chunk;
-          
-          // Don't update messages during streaming - wait for onComplete
         },
         onStatus: (statusText: string, eventType: string) => {
           if (!showStatusMessages || abortControllerRef.current?.signal.aborted) return;
+          
+          // Check if this response belongs to the current chat instance
+          if (currentInstanceId !== chatInstanceIdRef.current) {
+            console.log('[useKognysChat] Ignoring status from different chat instance');
+            return;
+          }
           
           console.log('[useKognysChat] Status event:', { statusText, eventType });
           
@@ -150,6 +179,12 @@ export function useKognysChat({
         },
         onAgentMessage: (agentName: string, message: string, agentRole?: string, messageType?: string) => {
           if (!showStatusMessages) return;
+          
+          // Check if this response belongs to the current chat instance
+          if (currentInstanceId !== chatInstanceIdRef.current) {
+            console.log('[useKognysChat] Ignoring agent message from different chat instance');
+            return;
+          }
           
           console.log('[useKognysChat] Agent message:', { agentName, message, agentRole, messageType });
           
@@ -197,6 +232,12 @@ export function useKognysChat({
         onComplete: (fullResponse: string, transactionHash?: string) => {
           if (abortControllerRef.current?.signal.aborted) return;
           
+          // Check if this response belongs to the current chat instance
+          if (currentInstanceId !== chatInstanceIdRef.current) {
+            console.log('[useKognysChat] Ignoring completion from different chat instance');
+            return;
+          }
+          
           console.log('[useKognysChat] Stream complete:', { 
             responseLength: fullResponse.length, 
             transactionHash,
@@ -208,21 +249,33 @@ export function useKognysChat({
             // Build the final content
             let finalContent = fullResponse;
             
-            // If we have a transaction hash, append it to the content
+            // If we have a transaction hash, append it to the content with BSC testnet link
             if (transactionHash) {
-              finalContent += `\n\n---\n\n**Transaction Hash:** \`${transactionHash}\``;
+              const bscTestnetUrl = `https://testnet.bscscan.com/tx/${transactionHash}`;
+              finalContent += `\n\n---\n\n**Transaction Hash:** [\`${transactionHash}\`](${bscTestnetUrl})`;
             }
             
-            // Add the complete assistant message
-            const assistantMessage: Message = { 
-              id: assistantMessageId, 
-              role: 'assistant', 
-              content: finalContent,
-              transactionHash,
-              timestamp: Date.now(),
-            };
-            
-            return [...prev, assistantMessage];
+            // Update the existing streaming message or add new one
+            const existingIndex = prev.findIndex(msg => msg.id === assistantMessageId);
+            if (existingIndex >= 0) {
+              const updated = [...prev];
+              updated[existingIndex] = {
+                ...updated[existingIndex],
+                content: finalContent,
+                transactionHash,
+              };
+              return updated;
+            } else {
+              // Add the complete assistant message
+              const assistantMessage: Message = { 
+                id: assistantMessageId, 
+                role: 'assistant', 
+                content: finalContent,
+                transactionHash,
+                timestamp: Date.now(),
+              };
+              return [...prev, assistantMessage];
+            }
           });
           
           setStatus('ready');

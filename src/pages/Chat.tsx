@@ -44,6 +44,12 @@ const Chat = () => {
   // Initialize or get existing chat
   useEffect(() => {
     setIsInitializing(true);
+    
+    // Stop any ongoing streaming when switching chats
+    if (stop) {
+      stop();
+    }
+    
     if (chatId) {
       let chat = chatStore.getChat(chatId);
       if (!chat) {
@@ -89,6 +95,16 @@ const Chat = () => {
       }
     }
   });
+  
+  // Cleanup on unmount or chat change
+  useEffect(() => {
+    return () => {
+      // Stop any ongoing streaming when component unmounts or chat changes
+      if (stop) {
+        stop();
+      }
+    };
+  }, [chatId, stop]);
   
   // Wrap handleSubmit to add scrolling
   const handleSubmit = async (e: React.FormEvent) => {
@@ -239,29 +255,31 @@ const Chat = () => {
       
       {/* Main Chat Area */}
       <div className={cn(
-        "flex-1 flex flex-col pb-24 transition-all duration-200",
+        "flex-1 flex flex-col transition-all duration-200",
         sidebarOpen ? "md:ml-64" : "md:ml-0"
       )}>
-        {/* Header with menu button */}
-        <div className="flex items-center justify-between p-4 border-b border-border/40">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              const newState = !sidebarOpen;
-              setSidebarOpen(newState);
-              localStorage.setItem('kognys_sidebar_open', JSON.stringify(newState));
-            }}
-            className="h-8 w-8 p-0"
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
-          <h1 className="font-medium text-sm md:hidden">Kognys</h1>
-          <div className="w-8 md:hidden" /> {/* Spacer for centering on mobile */}
+        {/* Header with menu button - Fixed */}
+        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40">
+          <div className="flex items-center justify-between p-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const newState = !sidebarOpen;
+                setSidebarOpen(newState);
+                localStorage.setItem('kognys_sidebar_open', JSON.stringify(newState));
+              }}
+              className="h-8 w-8 p-0"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+            <h1 className="font-medium text-sm md:hidden">Kognys</h1>
+            <div className="w-8 md:hidden" /> {/* Spacer for centering on mobile */}
+          </div>
         </div>
         
         {/* Messages Area */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden pb-24">
           <ScrollArea ref={scrollAreaRef} className="h-full">
             <div className="w-full flex justify-center">
               <div className="w-full max-w-4xl px-6 py-16">
@@ -401,12 +419,13 @@ const Chat = () => {
                                       ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-5 space-y-1.5 mb-4" {...props} />,
                                       li: ({node, ...props}) => <li className="text-foreground/85 leading-relaxed" {...props} />,
                                       p: ({node, ...props}) => <p className="mb-3 text-foreground/85 leading-relaxed last:mb-0" {...props} />,
-                                      blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary/30 pl-4 my-4 italic text-muted-foreground" {...props} />
+                                      blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary/30 pl-4 my-4 italic text-muted-foreground" {...props} />,
+                                      a: ({node, ...props}) => <a className="text-primary hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
                                     }}
                                   >
                                     {message.content}
                                   </ReactMarkdown>
-                                  {(status === 'streaming' && messages.findIndex(m => m.id === message.id) === messages.length - 1 && message.content) && (
+                                  {(status === 'streaming' && messages.findIndex(m => m.id === message.id) === messages.length - 1) && (
                                     <span className="inline-block w-0.5 h-5 bg-primary/60 ml-0.5 animate-pulse" />
                                   )}
                                 </div>
@@ -419,7 +438,7 @@ const Chat = () => {
                   });
                 })()}
                 
-                {(status === 'submitted' || status === 'streaming') && (
+                {(status === 'submitted' || (status === 'streaming' && messages[messages.length - 1]?.role !== 'assistant')) && (
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center">
                       <Bot className="w-5 h-5 text-muted-foreground/70" strokeWidth={1.5} />
