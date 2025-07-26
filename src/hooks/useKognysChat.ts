@@ -130,11 +130,8 @@ export function useKognysChat({
           
           // Check if this response belongs to the current chat instance
           if (currentInstanceId !== chatInstanceIdRef.current) {
-            console.log('[useKognysChat] Ignoring chunk from different chat instance');
             return;
           }
-          
-          console.log('[useKognysChat] Chunk received:', chunk);
           
           setStatus('streaming');
           setStreamingMessageId(assistantMessageId);
@@ -147,11 +144,8 @@ export function useKognysChat({
           
           // Check if this response belongs to the current chat instance
           if (currentInstanceId !== chatInstanceIdRef.current) {
-            console.log('[useKognysChat] Ignoring status from different chat instance');
             return;
           }
-          
-          console.log('[useKognysChat] Status event:', { statusText, eventType });
           
           const statusMessageId = `status-${Date.now()}`;
           
@@ -182,11 +176,8 @@ export function useKognysChat({
           
           // Check if this response belongs to the current chat instance
           if (currentInstanceId !== chatInstanceIdRef.current) {
-            console.log('[useKognysChat] Ignoring agent message from different chat instance');
             return;
           }
-          
-          console.log('[useKognysChat] Agent message:', { agentName, message, agentRole, messageType });
           
           // Determine target agent from message content
           const targetAgent = getTargetAgent(agentName.toLowerCase(), message);
@@ -234,15 +225,8 @@ export function useKognysChat({
           
           // Check if this response belongs to the current chat instance
           if (currentInstanceId !== chatInstanceIdRef.current) {
-            console.log('[useKognysChat] Ignoring completion from different chat instance');
             return;
           }
-          
-          console.log('[useKognysChat] Stream complete:', { 
-            responseLength: fullResponse.length, 
-            transactionHash,
-            preview: fullResponse.substring(0, 100) + '...'
-          });
           
           // Add the complete response message
           setMessages(prev => {
@@ -281,8 +265,19 @@ export function useKognysChat({
           setStatus('ready');
           setStreamingMessageId(null);
           
-          // Notify parent component about assistant message
-          onMessage?.({ role: 'assistant', content: fullResponse });
+          // Build final content with transaction hash link if available
+          let finalContentForCallback = fullResponse;
+          if (transactionHash) {
+            const bscTestnetUrl = `https://testnet.bscscan.com/tx/${transactionHash}`;
+            finalContentForCallback += `\n\n---\n\n**Transaction Hash:** [\`${transactionHash}\`](${bscTestnetUrl})`;
+          }
+          
+          // Notify parent component about assistant message with transaction hash
+          onMessage?.({ 
+            role: 'assistant', 
+            content: finalContentForCallback,
+            transactionHash 
+          });
         },
         onError: (error: Error) => {
           if (abortControllerRef.current?.signal.aborted) return;

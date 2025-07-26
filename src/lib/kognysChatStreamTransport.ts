@@ -61,17 +61,7 @@ export class KognysStreamChatTransport {
           lastUserMessage.content,
         {
           onEvent: (event: SSEEvent) => {
-            // Log all backend responses
-            console.log('[Backend Response]', {
-              event_type: event.event_type,
-              data: event.data,
-              timestamp: new Date().toISOString()
-            });
 
-            // Debug agent events specifically
-            if (event.event_type === 'agent_message' || event.event_type === 'agent_debate') {
-              console.log('[Agent Event]', event);
-            }
 
             // Extract agent information from the event
             const agentName = (event as any).agent || event.data.agent;
@@ -145,7 +135,6 @@ export class KognysStreamChatTransport {
               case 'draft_answer_token':
                 // Stream content tokens
                 if (event.data.token) {
-                  console.log('[Content Token - Draft]', event.data.token);
                   fullResponse += event.data.token;
                   onChunk?.(event.data.token);
                   
@@ -164,7 +153,6 @@ export class KognysStreamChatTransport {
               case 'final_answer_token':
                 // Stream final answer tokens
                 if (event.data.token) {
-                  console.log('[Content Token - Final]', event.data.token);
                   fullResponse += event.data.token;
                   onChunk?.(event.data.token);
                   
@@ -246,6 +234,18 @@ export class KognysStreamChatTransport {
                 const verifiableData = event.data.verifiable_data;
                 this.currentTransactionHash = verifiableData?.finish_task_txn_hash || null;
                 
+                // Store transaction hash in localStorage for persistence
+                if (this.currentTransactionHash) {
+                  const transactionHashes = JSON.parse(localStorage.getItem('kognys_transaction_hashes') || '{}');
+                  // Store by timestamp since we might not have a stable paper ID
+                  const key = `tx_${Date.now()}_${this.currentPaperId || 'unknown'}`;
+                  transactionHashes[key] = {
+                    hash: this.currentTransactionHash,
+                    paperId: this.currentPaperId,
+                    timestamp: Date.now()
+                  };
+                  localStorage.setItem('kognys_transaction_hashes', JSON.stringify(transactionHashes));
+                }
                 
                 // Extract membase IDs if needed
                 const membaseIds = verifiableData?.membase_kb_storage_receipt?.ids;
@@ -270,18 +270,17 @@ export class KognysStreamChatTransport {
                 return; // Exit early
 
               case 'agent_message':
-                // Log detailed agent message data
-                console.log('[Agent Message Detail]', {
-                  agent_name: event.data.agent_name,
-                  message: event.data.message,
-                  agent_role: event.data.agent_role,
-                  message_type: event.data.message_type,
-                  full_data: event.data
-                });
+                
+                // Check if this is a challenger agent with token criticism
+                let messageContent = event.data.message;
+                if (event.data.agent_name?.toLowerCase().includes('challenger') && event.data.token) {
+                  // Format the token criticism with proper display
+                  messageContent = `token:\n${event.data.token}`;
+                }
                 
                 onAgentMessage?.(
                   event.data.agent_name,
-                  event.data.message,
+                  messageContent,
                   event.data.agent_role,
                   event.data.message_type
                 );
@@ -301,11 +300,13 @@ export class KognysStreamChatTransport {
               case 'criticisms_received':
                 // Handle Challenger agent feedback with details
                 if (agentName === 'challenger' || event.data.agent === 'challenger') {
-                  let criticismMessage = `I've reviewed the draft and identified ${event.data.criticism_count} areas for improvement`;
+                  let criticismMessage = '';
                   
-                  // Check if we have detailed criticisms
-                  if (event.data.criticisms && Array.isArray(event.data.criticisms)) {
-                    criticismMessage += ':\n\n';
+                  // Check if we have token criticism first
+                  if (event.data.token) {
+                    criticismMessage = event.data.token; // Just the token content, no prefix
+                  } else if (event.data.criticisms && Array.isArray(event.data.criticisms)) {
+                    // Handle array of criticisms - just show the criticisms without the generic intro
                     event.data.criticisms.forEach((criticism: any, index: number) => {
                       criticismMessage += `🔍 **Issue ${index + 1}**: ${criticism.issue || criticism}\n`;
                       if (criticism.suggestion) {
@@ -317,14 +318,55 @@ export class KognysStreamChatTransport {
                       criticismMessage += '\n';
                     });
                   } else if (event.data.criticism_summary) {
-                    criticismMessage += `:\n\n${event.data.criticism_summary}`;
+                    criticismMessage = event.data.criticism_summary; // Just the summary, no intro
+                  }
+                  
+                  // Only send message if we have actual criticism content
+                  if (criticismMessage.trim()) {
+                    onAgentMessage?.(
+                      'Challenger',
+                      criticismMessage.trim(),
+                      'The Peer Reviewer',
+                      'analyzing'
+                    );
+                  }
+                }
+                break;
+                
+              case 'queries_refined':
+                // Handle query refiner agent
+                if (event.data.agent === 'query_refiner' && event.data.refined_queries) {
+                  const queries = event.data.refined_queries;
+                  let queryMessage = 'I\'ve optimized the search queries for each data source:\n\n';
+                  
+                  if (queries.openalex) {
+                    queryMessage += `📚 **OpenAlex**: \`${queries.openalex}\`\n\n`;
+                  }
+                  if (queries.semantic_scholar) {
+                    queryMessage += `📖 **Semantic Scholar**: \`${queries.semantic_scholar}\`\n\n`;
+                  }
+                  if (queries.arxiv) {
+                    queryMessage += `📄 **arXiv**: \`${queries.arxiv}\`\n\n`;
                   }
                   
                   onAgentMessage?.(
-                    'Challenger',
-                    criticismMessage,
-                    'The Peer Reviewer',
+                    'Query Refiner',
+                    queryMessage.trim(),
+                    'Search Optimization Specialist',
                     'analyzing'
+                  );
+                }
+                break;
+                
+              case 'criticism_token':
+                // Handle criticism token from challenger
+                
+                if (event.data.agent?.toLowerCase().includes('challenger') && event.data.token) {
+                  onAgentMessage?.(
+                    'Challenger',
+                    event.data.token, // Just the token content, no prefix
+                    'The Peer Reviewer',
+                    'criticisms_received'
                   );
                 }
                 break;
@@ -362,12 +404,6 @@ export class KognysStreamChatTransport {
             }
           },
           onComplete: () => {
-            console.log('[Stream Complete]', {
-              fullResponse: fullResponse.substring(0, 200) + '...',
-              transactionHash: this.currentTransactionHash,
-              paperId: this.currentPaperId,
-              responseLength: fullResponse.length
-            });
             onComplete?.(fullResponse, this.currentTransactionHash || undefined);
           },
           onError: (error) => {

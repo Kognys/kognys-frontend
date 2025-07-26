@@ -33,6 +33,8 @@ const getAgentIcon = (name: string, role?: string) => {
     return { emoji: '🧠', icon: <Brain className="w-4 h-4" /> };
   } else if (nameLower.includes('orchestrator') || nameLower.includes('coordinator')) {
     return { emoji: '🧑‍⚖️', icon: <Zap className="w-4 h-4" /> };
+  } else if (nameLower.includes('query') || nameLower.includes('refiner')) {
+    return { emoji: '🔍', icon: <Search className="w-4 h-4" /> };
   }
   return { emoji: '👤', icon: null };
 };
@@ -45,6 +47,8 @@ const getAgentColor = (name: string) => {
     'retriever': 'from-green-500 to-green-600',
     'synthesizer': 'from-amber-500 to-amber-600',
     'challenger': 'from-red-500 to-red-600',
+    'query': 'from-indigo-500 to-indigo-600',
+    'refiner': 'from-indigo-500 to-indigo-600',
   };
   
   const nameLower = name.toLowerCase();
