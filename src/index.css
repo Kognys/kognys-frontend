@@ -239,3 +239,6 @@ All colors MUST be HSL.
   box-shadow: 0 0 30px hsla(var(--primary), 0.25);
   transition: box-shadow 0.3s ease;
 }
+
+/* Import agent interaction animations */
+@import './styles/animations.css';

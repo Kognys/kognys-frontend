@@ -240,7 +240,7 @@ export class KognysStreamChatTransport {
                 }
                 break;
 
-              case 'research_completed':
+              case 'research_completed': {
                 this.currentPaperId = event.data.paper_id;
                 // Extract hash from verifiable_data
                 const verifiableData = event.data.verifiable_data;
@@ -255,6 +255,7 @@ export class KognysStreamChatTransport {
                   'research_completed'
                 );
                 break;
+              }
 
               case 'validation_error':
                 // Don't throw error, instead return a helpful message to the user
@@ -328,7 +329,7 @@ export class KognysStreamChatTransport {
                 }
                 break;
                 
-              case 'error':
+              case 'error': {
                 const errorMessage = event.data.error || 'Unknown error occurred';
                 
                 // List of non-critical errors to ignore
@@ -348,6 +349,7 @@ export class KognysStreamChatTransport {
                   throw new Error(errorMessage);
                 }
                 break;
+              }
                 
               default:
                 // Unknown event type

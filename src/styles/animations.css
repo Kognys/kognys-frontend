@@ -1,0 +1,80 @@
+/* Agent interaction animations */
+
+/* Fade in animation for new messages */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Pulse animation for active agents */
+@keyframes agentPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(var(--primary), 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(var(--primary), 0);
+  }
+}
+
+/* Highlight animation for important messages */
+@keyframes highlightGlow {
+  0%, 100% {
+    background-color: rgba(var(--primary), 0.05);
+  }
+  50% {
+    background-color: rgba(var(--primary), 0.1);
+  }
+}
+
+/* Agent avatar bounce animation */
+@keyframes avatarBounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(0.95);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Apply animations */
+.agent-message-enter {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.agent-avatar-active {
+  animation: agentPulse 2s ease-in-out infinite;
+}
+
+.message-highlight {
+  animation: highlightGlow 2s ease-in-out infinite;
+}
+
+.agent-avatar:hover {
+  animation: avatarBounce 0.5s ease-in-out;
+}
+
+/* Loading states */
+.agent-thinking::after {
+  content: '...';
+  animation: thinking 1.5s infinite;
+}
+
+@keyframes thinking {
+  0% { content: '.'; }
+  33% { content: '..'; }
+  66% { content: '...'; }
+}
+
+/* Smooth transitions */
+.agent-interaction-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

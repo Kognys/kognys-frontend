@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,11 @@ import { chatStore, type Chat as ChatType } from '@/lib/chatStore';
 import { ClaudeSidebar } from '@/components/ClaudeSidebar';
 import ReactMarkdown from 'react-markdown';
 import { PageLoader } from '@/components/PageLoader';
-import { AgentDebateMessage } from '@/components/AgentDebateMessage';
+import { ThreadedAgentMessage, AgentThreadContainer } from '@/components/ThreadedAgentMessage';
+import { ConnectableMessage, AgentInteractionConnector } from '@/components/AgentInteractionConnector';
 import { ReasoningToggle } from '@/components/ReasoningToggle';
+import { ResearchPhaseIndicator } from '@/components/ResearchPhaseIndicator';
+import type { AgentInteractionMessage } from '@/types/agentInteraction';
 
 const Chat = () => {
   const location = useLocation();
@@ -131,18 +134,59 @@ const Chat = () => {
     // They might want to read from their current position
   };
 
-  // Filter messages based on reasoning visibility
-  const visibleMessages = messages.filter(msg => {
-    // Always hide status messages (orange logs)
-    if (msg.role === 'status') {
-      return false;
+  // Process messages and group agent conversations
+  const { visibleMessages, agentThreads, phaseIndicators } = useMemo(() => {
+    const threads: AgentInteractionMessage[][] = [];
+    let currentThread: AgentInteractionMessage[] = [];
+    const phases: { phase: string; iteration: number; messageIndex: number }[] = [];
+    let currentIteration = 0;
+    
+    messages.forEach((msg, index) => {
+      if (msg.role === 'agent') {
+        currentThread.push(msg as AgentInteractionMessage);
+        
+        // Detect phase changes
+        const msgLower = msg.content.toLowerCase();
+        const agentLower = msg.agentName?.toLowerCase() || '';
+        
+        if (msg.messageType === 'research_started' || msgLower.includes('starting research')) {
+          phases.push({ phase: 'research', iteration: currentIteration, messageIndex: index });
+        } else if (agentLower.includes('validator') && !phases.some(p => p.phase === 'validation' && p.iteration === currentIteration)) {
+          phases.push({ phase: 'validation', iteration: currentIteration, messageIndex: index });
+        } else if (agentLower.includes('synthesizer') && !phases.some(p => p.phase === 'synthesis' && p.iteration === currentIteration)) {
+          phases.push({ phase: 'synthesis', iteration: currentIteration, messageIndex: index });
+        } else if ((agentLower.includes('challenger') || msg.messageType === 'criticisms_received') && !phases.some(p => p.phase === 'critique' && p.iteration === currentIteration)) {
+          phases.push({ phase: 'critique', iteration: currentIteration, messageIndex: index });
+        } else if (msgLower.includes('finalizing') || msgLower.includes('complete')) {
+          phases.push({ phase: 'finalize', iteration: currentIteration, messageIndex: index });
+        } else if (msgLower.includes('another round') || msgLower.includes('additional research')) {
+          currentIteration++;
+        }
+      } else if (currentThread.length > 0) {
+        threads.push(currentThread);
+        currentThread = [];
+      }
+    });
+    
+    if (currentThread.length > 0) {
+      threads.push(currentThread);
     }
-    // Hide agent messages if reasoning is hidden
-    if (msg.role === 'agent' && !showReasoning) {
-      return false;
-    }
-    return true;
-  });
+    
+    // Filter visible messages
+    const visible = messages.filter(msg => {
+      // Always hide status messages (orange logs)
+      if (msg.role === 'status') {
+        return false;
+      }
+      // Hide agent messages if reasoning is hidden
+      if (msg.role === 'agent' && !showReasoning) {
+        return false;
+      }
+      return true;
+    });
+    
+    return { visibleMessages: visible, agentThreads: threads, phaseIndicators: phases };
+  }, [messages, showReasoning]);
 
   // Smooth scroll to bottom function
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -233,6 +277,7 @@ const Chat = () => {
                 
                 {(() => {
                   let toggleShown = false;
+                  let threadIndex = 0;
                   
                   return messages.map((message, index) => {
                     // Skip rendering status messages entirely
@@ -276,61 +321,102 @@ const Chat = () => {
                           );
                         })()}
                         
-                        <div className="group transition-all duration-300">
                         {message.role === 'user' ? (
-                          <div className="flex items-start gap-4 justify-end">
-                            <div className="text-right">
-                              <div className="inline-block text-sm font-medium text-primary/80 mb-2">You</div>
-                              <div className="text-foreground/90 text-lg font-medium leading-relaxed">
-                                {message.content}
+                          <div className="group transition-all duration-300">
+                            <div className="flex items-start gap-4 justify-end">
+                              <div className="text-right">
+                                <div className="inline-block text-sm font-medium text-primary/80 mb-2">You</div>
+                                <div className="text-foreground/90 text-lg font-medium leading-relaxed">
+                                  {message.content}
+                                </div>
                               </div>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mt-1">
-                              <User className="w-5 h-5 text-primary/70" strokeWidth={1.5} />
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mt-1">
+                                <User className="w-5 h-5 text-primary/70" strokeWidth={1.5} />
+                              </div>
                             </div>
                           </div>
                         ) : message.role === 'agent' ? (
-                          <div className="my-3">
-                            <AgentDebateMessage 
-                              agentName={message.agentName || 'Agent'}
-                              agentRole={message.agentRole}
-                              message={message.content}
-                              messageType={message.messageType as 'thinking' | 'speaking' | 'analyzing' | 'concluding' | undefined}
-                            />
-                          </div>
+                          // Check if this is the start of a new thread
+                          (() => {
+                            const prevMessage = index > 0 ? messages[index - 1] : null;
+                            const isNewThread = !prevMessage || prevMessage.role !== 'agent';
+                            const currentAgentThread = isNewThread && threadIndex < agentThreads.length ? agentThreads[threadIndex++] : null;
+                            
+                            if (currentAgentThread && isNewThread) {
+                              // Check if we should show a phase indicator
+                              const phaseForThisMessage = phaseIndicators.find(p => p.messageIndex === index);
+                              
+                              // Render the entire thread at once
+                              return (
+                                <div className="my-6 relative">
+                                  {/* Show phase indicator if this is the start of a new phase */}
+                                  {phaseForThisMessage && (
+                                    <div className="mb-4 flex justify-center">
+                                      <ResearchPhaseIndicator 
+                                        phase={phaseForThisMessage.phase as any}
+                                        iterationNumber={phaseForThisMessage.iteration > 0 ? phaseForThisMessage.iteration : undefined}
+                                      />
+                                    </div>
+                                  )}
+                                  
+                                  <AgentThreadContainer messages={currentAgentThread} />
+                                  
+                                  {/* Add connectors between messages */}
+                                  {currentAgentThread.map((msg, idx) => {
+                                    if (idx === 0) return null;
+                                    const prevMsg = currentAgentThread[idx - 1];
+                                    if (prevMsg.targetAgent === msg.agentName) {
+                                      return (
+                                        <AgentInteractionConnector
+                                          key={`connector-${prevMsg.id}-${msg.id}`}
+                                          fromElement={`msg-${prevMsg.id}`}
+                                          toElement={`msg-${msg.id}`}
+                                          type={msg.messageType === 'criticisms_received' ? 'critique' : 'direct'}
+                                          animated={true}
+                                        />
+                                      );
+                                    }
+                                    return null;
+                                  })}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()
                         ) : (
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center mt-1">
-                              <Bot className="w-5 h-5 text-muted-foreground/70" strokeWidth={1.5} />
-                            </div>
-                            <div className="flex-1">
-                              <div className="text-sm font-medium text-muted-foreground/80 mb-3">Kognys Agent</div>
-                              <div className="prose prose-neutral dark:prose-invert max-w-none">
-                                <ReactMarkdown
-                                  components={{
-                                    h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-6 mb-3 text-foreground first:mt-0" {...props} />,
-                                    h3: ({node, ...props}) => <h3 className="text-base font-semibold mt-4 mb-2 text-foreground/90" {...props} />,
-                                    strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
-                                    ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 space-y-1.5 mb-4" {...props} />,
-                                    ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-5 space-y-1.5 mb-4" {...props} />,
-                                    li: ({node, ...props}) => <li className="text-foreground/85 leading-relaxed" {...props} />,
-                                    p: ({node, ...props}) => <p className="mb-3 text-foreground/85 leading-relaxed last:mb-0" {...props} />,
-                                    blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary/30 pl-4 my-4 italic text-muted-foreground" {...props} />
-                                  }}
-                                >
-                                  {message.content}
-                                </ReactMarkdown>
-                                {(status === 'streaming' && messages.findIndex(m => m.id === message.id) === messages.length - 1 && message.content) && (
-                                  <span className="inline-block w-0.5 h-5 bg-primary/60 ml-0.5 animate-pulse" />
-                                )}
+                          <div className="group transition-all duration-300">
+                            <div className="flex items-start gap-4">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center mt-1">
+                                <Bot className="w-5 h-5 text-muted-foreground/70" strokeWidth={1.5} />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-muted-foreground/80 mb-3">Kognys Agent</div>
+                                <div className="prose prose-neutral dark:prose-invert max-w-none">
+                                  <ReactMarkdown
+                                    components={{
+                                      h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-6 mb-3 text-foreground first:mt-0" {...props} />,
+                                      h3: ({node, ...props}) => <h3 className="text-base font-semibold mt-4 mb-2 text-foreground/90" {...props} />,
+                                      strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
+                                      ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 space-y-1.5 mb-4" {...props} />,
+                                      ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-5 space-y-1.5 mb-4" {...props} />,
+                                      li: ({node, ...props}) => <li className="text-foreground/85 leading-relaxed" {...props} />,
+                                      p: ({node, ...props}) => <p className="mb-3 text-foreground/85 leading-relaxed last:mb-0" {...props} />,
+                                      blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary/30 pl-4 my-4 italic text-muted-foreground" {...props} />
+                                    }}
+                                  >
+                                    {message.content}
+                                  </ReactMarkdown>
+                                  {(status === 'streaming' && messages.findIndex(m => m.id === message.id) === messages.length - 1 && message.content) && (
+                                    <span className="inline-block w-0.5 h-5 bg-primary/60 ml-0.5 animate-pulse" />
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
                         )}
-                      </div>
-                    </React.Fragment>
-                  );
-                });
+                      </React.Fragment>
+                    );
+                  });
                 })()}
                 
                 {(status === 'submitted' || status === 'streaming') && (

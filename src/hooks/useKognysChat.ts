@@ -1,17 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { kognysChatStreamTransport } from '@/lib/kognysChatStreamTransport';
+import { AgentInteractionMessage, getTargetAgent } from '@/types/agentInteraction';
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant' | 'status' | 'agent';
-  content: string;
-  eventType?: string;
-  temporary?: boolean;
-  agentName?: string;
-  agentRole?: string;
-  messageType?: string;
-  transactionHash?: string;
-}
+type Message = AgentInteractionMessage;
 
 type ChatStatus = 'ready' | 'submitted' | 'streaming' | 'error';
 
@@ -94,6 +85,7 @@ export function useKognysChat({
       id: Date.now().toString(),
       role: 'user',
       content: content.trim(),
+      timestamp: Date.now(),
     };
 
     // Add only user message initially
@@ -161,6 +153,9 @@ export function useKognysChat({
           
           console.log('[useKognysChat] Agent message:', { agentName, message, agentRole, messageType });
           
+          // Determine target agent from message content
+          const targetAgent = getTargetAgent(agentName.toLowerCase(), message);
+          
           // Check if we already have this exact message from the same agent
           const agentMessageId = `agent-${Date.now()}-${Math.random()}`;
           
@@ -176,15 +171,24 @@ export function useKognysChat({
               return prev;
             }
             
-            return [...prev, {
+            const newMessage: Message = {
               id: agentMessageId,
               role: 'agent' as const,
               content: message,
               agentName,
               agentRole,
               messageType,
-              temporary: true
-            }];
+              temporary: true,
+              timestamp: Date.now(),
+              targetAgent,
+              // Highlight important interactions
+              isHighlighted: messageType === 'criticisms_received' || 
+                           messageType === 'orchestrator_decision' ||
+                           message.toLowerCase().includes('error') ||
+                           message.toLowerCase().includes('issue'),
+            };
+            
+            return [...prev, newMessage];
           });
         },
         onAgentDebate: (agents: any[], topic?: string) => {
@@ -214,7 +218,8 @@ export function useKognysChat({
               id: assistantMessageId, 
               role: 'assistant', 
               content: finalContent,
-              transactionHash
+              transactionHash,
+              timestamp: Date.now(),
             };
             
             return [...prev, assistantMessage];
