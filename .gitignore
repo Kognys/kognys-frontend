@@ -31,3 +31,4 @@ dist-ssr
 *.sw?
 CLAUDE.md
 .env
+specs

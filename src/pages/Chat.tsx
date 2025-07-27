@@ -11,9 +11,11 @@ import { ClaudeSidebar } from '@/components/ClaudeSidebar';
 import ReactMarkdown from 'react-markdown';
 import { PageLoader } from '@/components/PageLoader';
 import { ThreadedAgentMessage, AgentThreadContainer } from '@/components/ThreadedAgentMessage';
+import { EnhancedAgentMessage, EnhancedAgentThreadContainer } from '@/components/EnhancedAgentMessage';
 import { ConnectableMessage, AgentInteractionConnector } from '@/components/AgentInteractionConnector';
 import { ReasoningToggle } from '@/components/ReasoningToggle';
 import { ResearchPhaseIndicator } from '@/components/ResearchPhaseIndicator';
+import { EnhancedPhaseIndicator } from '@/components/EnhancedPhaseIndicator';
 import type { AgentInteractionMessage } from '@/types/agentInteraction';
 
 const Chat = () => {
@@ -370,14 +372,14 @@ const Chat = () => {
                                   {/* Show phase indicator if this is the start of a new phase */}
                                   {phaseForThisMessage && (
                                     <div className="mb-4 flex justify-center">
-                                      <ResearchPhaseIndicator 
+                                      <EnhancedPhaseIndicator 
                                         phase={phaseForThisMessage.phase as any}
                                         iterationNumber={phaseForThisMessage.iteration > 0 ? phaseForThisMessage.iteration : undefined}
                                       />
                                     </div>
                                   )}
                                   
-                                  <AgentThreadContainer messages={currentAgentThread} />
+                                  <EnhancedAgentThreadContainer messages={currentAgentThread} />
                                   
                                   {/* Add connectors between messages */}
                                   {currentAgentThread.map((msg, idx) => {
