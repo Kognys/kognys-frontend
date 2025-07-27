@@ -319,7 +319,21 @@ export const EnhancedAgentMessage = ({
                               className={cn("border-l-2 pl-2 my-2 italic opacity-80", colorScheme.border)} 
                               {...props} 
                             />
-                          )
+                          ),
+                          a: ({node, ...props}) => (
+                            <a 
+                              className={cn("underline underline-offset-2 hover:opacity-80 transition-opacity", colorScheme.text)} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              {...props} 
+                            />
+                          ),
+                          code: ({node, inline, ...props}) => 
+                            inline ? (
+                              <code className="px-1.5 py-0.5 rounded bg-muted text-xs font-medium" {...props} />
+                            ) : (
+                              <code {...props} />
+                            )
                         }}
                       >
                         {section.content}

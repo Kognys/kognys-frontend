@@ -177,7 +177,21 @@ export const ThreadedAgentMessage = ({
                 ul: ({node, ...props}) => <ul className="list-disc list-inside ml-2 space-y-1 mb-2" {...props} />,
                 ol: ({node, ...props}) => <ol className="list-decimal list-inside ml-2 space-y-1 mb-2" {...props} />,
                 li: ({node, ...props}) => <li className="text-sm" {...props} />,
-                blockquote: ({node, ...props}) => <blockquote className="border-l-2 border-primary/30 pl-2 my-2 italic text-muted-foreground text-sm" {...props} />
+                blockquote: ({node, ...props}) => <blockquote className="border-l-2 border-primary/30 pl-2 my-2 italic text-muted-foreground text-sm" {...props} />,
+                a: ({node, ...props}) => (
+                  <a 
+                    className="text-primary underline underline-offset-2 hover:opacity-80 transition-opacity" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    {...props} 
+                  />
+                ),
+                code: ({node, inline, ...props}) => 
+                  inline ? (
+                    <code className="px-1.5 py-0.5 rounded bg-muted text-xs font-medium" {...props} />
+                  ) : (
+                    <code {...props} />
+                  )
               }}
             >
               {message}

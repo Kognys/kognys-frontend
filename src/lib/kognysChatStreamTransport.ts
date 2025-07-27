@@ -110,7 +110,7 @@ export class KognysStreamChatTransport {
   }: KognysStreamOptions) {
     let retryCount = 0;
     
-    const attemptStream = async (): Promise<any> => {
+    const attemptStream = async (): Promise<{ fullResponse: string; paperId?: string; transactionHash?: string; status: string }> => {
       try {
         // Reset challenger state for new stream
         this.accumulatedChallengerCriticisms = [];
@@ -141,15 +141,8 @@ export class KognysStreamChatTransport {
           lastUserMessage.content,
         {
           onEvent: (event: SSEEvent) => {
-            // Log all events from papers/stream endpoint
-            console.log('[papers/stream] Event received:', {
-              type: event.event_type,
-              data: event.data,
-              fullEvent: event
-            });
-
             // Extract agent information from the event
-            const agentName = (event as any).agent || event.data.agent;
+            const agentName = (event as SSEEvent & { agent?: string }).agent || (event.data as { agent?: string }).agent;
             
             // Handle different event types
             switch (event.event_type) {
@@ -188,14 +181,6 @@ export class KognysStreamChatTransport {
                   'documents_retrieved'
                 );
                 
-                // Log document structure to see available fields
-                console.log('[papers/stream] Documents retrieved structure:', {
-                  documentCount: event.data.document_count,
-                  documents: (event.data as any).documents,
-                  documentTitles: (event.data as any).document_titles,
-                  fullEventData: event.data
-                });
-                
                 // Show detailed document information
                 if (agentName) {
                   let documentMessage = `I found ${event.data.document_count} relevant documents for analysis`;
@@ -203,11 +188,28 @@ export class KognysStreamChatTransport {
                   // Check if we have document details in the event data
                   if (event.data.documents && Array.isArray(event.data.documents)) {
                     documentMessage += ':\n\n';
-                    event.data.documents.forEach((doc: any, index: number) => {
-                      documentMessage += `📄 **Document ${index + 1}**: ${doc.title || 'Untitled'}\n`;
-                      if (doc.source) documentMessage += `   Source: ${doc.source}\n`;
-                      if (doc.relevance_score) documentMessage += `   Relevance: ${Math.round(doc.relevance_score * 100)}%\n`;
-                      documentMessage += '\n';
+                    event.data.documents.forEach((doc: { title?: string; url?: string; source?: string; relevance_score?: number }) => {
+                      // Format title with clickable link
+                      const title = doc.title || 'Untitled';
+                      const truncatedTitle = title.length > 80 ? title.substring(0, 77) + '...' : title;
+                      
+                      if (doc.url) {
+                        documentMessage += `📄 [${truncatedTitle}](${doc.url})`;
+                      } else {
+                        documentMessage += `📄 **${truncatedTitle}**`;
+                      }
+                      
+                      // Add source as inline code block for badge effect
+                      if (doc.source) {
+                        documentMessage += ` \`${doc.source}\``;
+                      }
+                      
+                      // Add relevance score if available
+                      if (doc.relevance_score) {
+                        documentMessage += ` · ${Math.round(doc.relevance_score * 100)}% match`;
+                      }
+                      
+                      documentMessage += '\n\n';
                     });
                   } else if (event.data.document_titles && Array.isArray(event.data.document_titles)) {
                     documentMessage += ':\n\n';
@@ -272,8 +274,9 @@ export class KognysStreamChatTransport {
                   
                   if (event.data.sections && Array.isArray(event.data.sections)) {
                     draftMessage += '. The draft includes:\n\n';
-                    event.data.sections.forEach((section: any) => {
-                      draftMessage += `📝 ${section.title || section}\n`;
+                    event.data.sections.forEach((section: { title?: string } | string) => {
+                      const sectionTitle = typeof section === 'string' ? section : section.title || 'Section';
+                      draftMessage += `📝 ${sectionTitle}\n`;
                     });
                   } else if (event.data.summary) {
                     draftMessage += `\n\n**Summary**: ${event.data.summary}`;
@@ -419,17 +422,19 @@ export class KognysStreamChatTransport {
               case 'criticisms_received':
                 // Handle Challenger agent feedback with details
                 if (agentName === 'challenger' || event.data.agent === 'challenger') {
-                  let criticismMessages: string[] = [];
+                  const criticismMessages: string[] = [];
                   
                   // Check if we have token criticism first
                   if (event.data.token) {
                     criticismMessages.push(event.data.token);
                   } else if (event.data.criticisms && Array.isArray(event.data.criticisms)) {
                     // Handle array of criticisms - format each one
-                    event.data.criticisms.forEach((criticism: any) => {
+                    event.data.criticisms.forEach((criticism: { issue?: string; suggestion?: string; severity?: string } | string) => {
                       let formattedCriticism = '';
-                      if (criticism.issue || typeof criticism === 'string') {
-                        formattedCriticism = `🔍 ${criticism.issue || criticism}`;
+                      if (typeof criticism === 'string') {
+                        formattedCriticism = `🔍 ${criticism}`;
+                      } else if (criticism.issue) {
+                        formattedCriticism = `🔍 ${criticism.issue}`;
                         if (criticism.suggestion) {
                           formattedCriticism += `\n💡 Suggestion: ${criticism.suggestion}`;
                         }
