@@ -208,8 +208,7 @@ export function useKognysChat({
               timestamp: Date.now(),
               targetAgent,
               // Highlight important interactions
-              isHighlighted: messageType === 'criticisms_received' || 
-                           messageType === 'orchestrator_decision' ||
+              isHighlighted: messageType === 'orchestrator_decision' ||
                            message.toLowerCase().includes('error') ||
                            message.toLowerCase().includes('issue'),
             };
