@@ -126,8 +126,7 @@ const CollapsibleSection = ({ title, content, type, colorScheme }: CollapsibleSe
   
   return (
     <div className={cn(
-      "rounded-lg border overflow-hidden transition-all duration-200",
-      colorScheme.border,
+      "rounded-lg overflow-hidden transition-all duration-200",
       colorScheme.bg
     )}>
       <button
