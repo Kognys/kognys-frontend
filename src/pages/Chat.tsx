@@ -17,6 +17,7 @@ import { ReasoningToggle } from '@/components/ReasoningToggle';
 import { ResearchPhaseIndicator } from '@/components/ResearchPhaseIndicator';
 import { EnhancedPhaseIndicator } from '@/components/EnhancedPhaseIndicator';
 import type { AgentInteractionMessage } from '@/types/agentInteraction';
+import { StreamingText } from '@/components/StreamingText';
 
 const Chat = () => {
   const location = useLocation();
@@ -42,6 +43,7 @@ const Chat = () => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageCountRef = useRef(0);
+
 
   // Initialize or get existing chat
   useEffect(() => {
@@ -132,16 +134,7 @@ const Chat = () => {
     }
   }, [location.state, messages.length, loadedMessages.length, setInput, isInitializing, navigate, location.pathname]);
 
-  // Auto-hide reasoning when streaming completes
-  useEffect(() => {
-    if (status === 'ready' && messages.some(msg => msg.role === 'agent')) {
-      // Auto-hide reasoning when a response is complete
-      setShowReasoning(false);
-    } else if (status === 'streaming' || status === 'submitted') {
-      // Auto-show reasoning when starting a new request
-      setShowReasoning(true);
-    }
-  }, [status, messages]);
+  // Remove auto-toggle of reasoning - respect user's choice
 
   const toggleReasoning = () => {
     const newState = !showReasoning;
@@ -412,24 +405,10 @@ const Chat = () => {
                               <div className="flex-1">
                                 <div className="text-sm font-medium text-muted-foreground/80 mb-3">Kognys Agent</div>
                                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                                  <ReactMarkdown
-                                    components={{
-                                      h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-6 mb-3 text-foreground first:mt-0" {...props} />,
-                                      h3: ({node, ...props}) => <h3 className="text-base font-semibold mt-4 mb-2 text-foreground/90" {...props} />,
-                                      strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
-                                      ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 space-y-1.5 mb-4" {...props} />,
-                                      ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-5 space-y-1.5 mb-4" {...props} />,
-                                      li: ({node, ...props}) => <li className="text-foreground/85 leading-relaxed" {...props} />,
-                                      p: ({node, ...props}) => <p className="mb-3 text-foreground/85 leading-relaxed last:mb-0" {...props} />,
-                                      blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary/30 pl-4 my-4 italic text-muted-foreground" {...props} />,
-                                      a: ({node, ...props}) => <a className="text-primary hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
-                                    }}
-                                  >
-                                    {message.content}
-                                  </ReactMarkdown>
-                                  {(status === 'streaming' && messages.findIndex(m => m.id === message.id) === messages.length - 1) && (
-                                    <span className="inline-block w-0.5 h-5 bg-primary/60 ml-0.5 animate-pulse" />
-                                  )}
+                                  <StreamingText
+                                    content={message.content}
+                                    isStreaming={status === 'streaming' && messages.findIndex(m => m.id === message.id) === messages.length - 1}
+                                  />
                                 </div>
                               </div>
                             </div>
