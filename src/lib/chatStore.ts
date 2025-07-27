@@ -126,7 +126,7 @@ export class ChatStore {
     return deleted;
   }
 
-  addMessage(chatId: string, message: Omit<Chat['messages'][0], 'id'>): void {
+  addMessage(chatId: string, message: Partial<Chat['messages'][0]>): void {
     const chat = this.chats.get(chatId);
     if (!chat) return;
 
@@ -148,8 +148,8 @@ export class ChatStore {
 
     const messageWithId = {
       ...message,
-      id: this.generateId()
-    };
+      id: message.id || this.generateId()
+    } as Chat['messages'][0];
 
     chat.messages.push(messageWithId);
     chat.updatedAt = new Date();

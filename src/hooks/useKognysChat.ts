@@ -204,7 +204,7 @@ export function useKognysChat({
               agentName,
               agentRole,
               messageType,
-              temporary: true,
+              temporary: false,
               timestamp: Date.now(),
               targetAgent,
               // Highlight important interactions

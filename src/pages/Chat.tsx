@@ -35,9 +35,17 @@ const Chat = () => {
   });
   const [isInitializing, setIsInitializing] = useState(true);
   const [showReasoning, setShowReasoning] = useState(() => {
-    const savedState = localStorage.getItem('kognys_show_reasoning');
-    return savedState !== null ? JSON.parse(savedState) : false;
+    // Check per-chat preference first
+    if (chatId) {
+      const chatPreference = localStorage.getItem(`kognys_show_reasoning_${chatId}`);
+      if (chatPreference !== null) {
+        return JSON.parse(chatPreference);
+      }
+    }
+    // Default to true for new chats
+    return true;
   });
+  const [userHasManuallyToggled, setUserHasManuallyToggled] = useState(false);
   
   // Refs for scrolling
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -57,6 +65,20 @@ const Chat = () => {
     // Stop any ongoing streaming when switching chats
     if (stopRef.current) {
       stopRef.current();
+    }
+    
+    // Reset manual toggle flag when switching chats
+    setUserHasManuallyToggled(false);
+    
+    // Load chat-specific reasoning preference
+    if (chatId) {
+      const chatPreference = localStorage.getItem(`kognys_show_reasoning_${chatId}`);
+      if (chatPreference !== null) {
+        setShowReasoning(JSON.parse(chatPreference));
+      } else {
+        // Default to true for new chats
+        setShowReasoning(true);
+      }
     }
     
     // Clean up old streaming progress entries (older than 24 hours)
@@ -144,8 +166,15 @@ const Chat = () => {
   
   // Wrap handleSubmit to add scrolling
   const handleSubmit = async (e: React.FormEvent) => {
-    // Reset user scroll flag when sending a new message
+    // When sending a new message, allow auto-scroll to resume
     userHasScrolledRef.current = false;
+    
+    // Reset manual toggle flag and show reasoning for new queries
+    setUserHasManuallyToggled(false);
+    if (!userHasManuallyToggled || !showReasoning) {
+      setShowReasoning(true);
+    }
+    
     await originalHandleSubmit(e);
     // Scroll to bottom when submitting
     setTimeout(() => scrollToBottom(), 100);
@@ -168,16 +197,70 @@ const Chat = () => {
     }
   }, [location.state, messages.length, loadedMessages.length, setInput, isInitializing, navigate, location.pathname]);
 
-  // Remove auto-toggle of reasoning - respect user's choice
+  // Auto-close reasoning when response completes (but only if user hasn't manually toggled)
+  useEffect(() => {
+    // Only auto-close if:
+    // 1. Status changed from streaming to ready (response complete)
+    // 2. User hasn't manually toggled during this session
+    // 3. Reasoning is currently shown
+    if (status === 'ready' && showReasoning && !userHasManuallyToggled) {
+      // Check if we just completed streaming (by looking for assistant messages)
+      const hasAssistantMessage = messages.some(m => m.role === 'assistant');
+      if (hasAssistantMessage) {
+        setShowReasoning(false);
+      }
+    }
+  }, [status, showReasoning, userHasManuallyToggled, messages]);
 
   const toggleReasoning = () => {
     const newState = !showReasoning;
     setShowReasoning(newState);
-    localStorage.setItem('kognys_show_reasoning', JSON.stringify(newState));
+    setUserHasManuallyToggled(true);
+    
+    // Save per-chat preference
+    if (chatId) {
+      localStorage.setItem(`kognys_show_reasoning_${chatId}`, JSON.stringify(newState));
+    }
     
     // Don't auto-scroll when user manually toggles
     // They might want to read from their current position
+    // Temporarily disable auto-scrolling to prevent layout shift from triggering scroll
+    const currentUserScrollState = userHasScrolledRef.current;
+    userHasScrolledRef.current = true;
+    
+    // Re-enable auto-scrolling after a short delay if user was previously at bottom
+    setTimeout(() => {
+      if (!currentUserScrollState) {
+        userHasScrolledRef.current = false;
+      }
+    }, 300);
   };
+
+  // Setup scroll detection
+  useEffect(() => {
+    const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      if (!isAutoScrollingRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        const isNearBottom = distanceFromBottom < 100;
+        
+        // If user scrolled away from bottom (more than 150px), set flag
+        // Using a threshold to avoid false positives from small layout changes
+        if (!isNearBottom && distanceFromBottom > 150) {
+          userHasScrolledRef.current = true;
+        } else if (distanceFromBottom < 50 && userHasScrolledRef.current) {
+          // If user manually scrolled very close to bottom, reset flag
+          userHasScrolledRef.current = false;
+        }
+      }
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll);
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [chatId]); // Re-attach when chat changes
 
   // Process messages and group agent conversations
   const { visibleMessages, agentThreads, phaseIndicators } = useMemo(() => {
@@ -317,23 +400,6 @@ const Chat = () => {
           <ScrollArea 
             ref={scrollAreaRef} 
             className="h-full"
-            onScrollPositionChange={(position) => {
-              if (!isAutoScrollingRef.current) {
-                const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-                if (scrollContainer) {
-                  const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-                  const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-                  
-                  // If user scrolled away from bottom, set flag
-                  if (!isNearBottom) {
-                    userHasScrolledRef.current = true;
-                  } else {
-                    // If user scrolled back to bottom, reset flag
-                    userHasScrolledRef.current = false;
-                  }
-                }
-              }
-            }}
           >
             <div className="w-full flex justify-center">
               <div className="w-full max-w-4xl px-6 py-16">
