@@ -141,7 +141,12 @@ export class KognysStreamChatTransport {
           lastUserMessage.content,
         {
           onEvent: (event: SSEEvent) => {
-
+            // Log all events from papers/stream endpoint
+            console.log('[papers/stream] Event received:', {
+              type: event.event_type,
+              data: event.data,
+              fullEvent: event
+            });
 
             // Extract agent information from the event
             const agentName = (event as any).agent || event.data.agent;
@@ -182,6 +187,14 @@ export class KognysStreamChatTransport {
                   `Retrieved ${event.data.document_count} documents (${documentCount} total)`,
                   'documents_retrieved'
                 );
+                
+                // Log document structure to see available fields
+                console.log('[papers/stream] Documents retrieved structure:', {
+                  documentCount: event.data.document_count,
+                  documents: (event.data as any).documents,
+                  documentTitles: (event.data as any).document_titles,
+                  fullEventData: event.data
+                });
                 
                 // Show detailed document information
                 if (agentName) {

@@ -239,7 +239,6 @@ export const EnhancedAgentMessage = ({
       className={cn(
         'relative transition-all duration-300',
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2',
-        isHighlighted && 'ring-2 ring-primary/30',
         isReply && 'ml-12',
         className
       )}
@@ -260,8 +259,7 @@ export const EnhancedAgentMessage = ({
         id={`msg-${id || agentName + Date.now()}`}
         className={cn(
           'rounded-lg border-l-4 transition-all duration-200',
-          colorScheme.border,
-          isHighlighted && colorScheme.bg
+          colorScheme.border
         )}
       >
         <div className="flex items-start gap-3 p-4">
