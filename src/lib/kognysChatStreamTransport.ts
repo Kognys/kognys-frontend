@@ -26,6 +26,77 @@ export class KognysStreamChatTransport {
   private currentTransactionHash: string | null = null;
   private maxRetries = 3;
   private retryDelay = 1000; // Start with 1 second
+  private accumulatedChallengerCriticisms: string[] = [];
+  private hasShownChallengerIntro: boolean = false;
+  private challengerDebounceTimer: NodeJS.Timeout | null = null;
+  private currentChallengerBuffer: string = '';
+
+  private isCompleteSentence(text: string): boolean {
+    // Check if text ends with sentence-ending punctuation
+    const sentenceEnders = /[.!?]$/;
+    const hasEnder = sentenceEnders.test(text.trim());
+    
+    // Also check for common criticism patterns that indicate a complete thought
+    const completePhrases = [
+      /without\s+explaining/i,
+      /lacks?\s+specific/i,
+      /is\s+too\s+vague/i,
+      /does\s+not\s+explain/i,
+      /beyond\s+simply\s+stating/i,
+      /without\s+isolating/i
+    ];
+    
+    const hasCompletePhrase = completePhrases.some(pattern => pattern.test(text));
+    
+    // Consider it complete if it has punctuation OR a complete phrase pattern
+    return hasEnder || hasCompletePhrase;
+  }
+
+  private flushChallengerCriticisms(onAgentMessage?: KognysStreamOptions['onAgentMessage'], forceFlush: boolean = false) {
+    // Clear any existing timer
+    if (this.challengerDebounceTimer) {
+      clearTimeout(this.challengerDebounceTimer);
+      this.challengerDebounceTimer = null;
+    }
+    
+    // Process any remaining buffer content
+    if (this.currentChallengerBuffer.trim() && (forceFlush || this.isCompleteSentence(this.currentChallengerBuffer))) {
+      this.accumulatedChallengerCriticisms.push(this.currentChallengerBuffer.trim());
+      this.currentChallengerBuffer = '';
+    }
+    
+    if (this.accumulatedChallengerCriticisms.length === 0) return;
+    
+    // If there's only one criticism, send it directly without enumeration
+    if (this.accumulatedChallengerCriticisms.length === 1) {
+      onAgentMessage?.(
+        'Challenger',
+        this.accumulatedChallengerCriticisms[0],
+        'The Peer Reviewer',
+        'analyzing'
+      );
+    } else {
+      // Multiple criticisms - combine into enumerated list
+      let fullCriticismMessage = "I've reviewed the research and identified several areas for improvement:\n\n";
+      
+      // Add all accumulated criticisms as numbered points
+      this.accumulatedChallengerCriticisms.forEach((criticism, index) => {
+        fullCriticismMessage += `**${index + 1}.** ${criticism}\n\n`;
+      });
+      
+      // Send the combined message
+      onAgentMessage?.(
+        'Challenger',
+        fullCriticismMessage.trim(),
+        'The Peer Reviewer',
+        'analyzing'
+      );
+    }
+    
+    // Clear the accumulator
+    this.accumulatedChallengerCriticisms = [];
+    this.hasShownChallengerIntro = true;
+  }
 
   async sendMessages({ 
     messages, 
@@ -41,6 +112,15 @@ export class KognysStreamChatTransport {
     
     const attemptStream = async (): Promise<any> => {
       try {
+        // Reset challenger state for new stream
+        this.accumulatedChallengerCriticisms = [];
+        this.hasShownChallengerIntro = false;
+        this.currentChallengerBuffer = '';
+        if (this.challengerDebounceTimer) {
+          clearTimeout(this.challengerDebounceTimer);
+          this.challengerDebounceTimer = null;
+        }
+        
         // Get the last user message
         const lastUserMessage = messages
           .slice()
@@ -271,19 +351,45 @@ export class KognysStreamChatTransport {
 
               case 'agent_message':
                 
-                // Check if this is a challenger agent with token criticism
-                let messageContent = event.data.message;
-                if (event.data.agent_name?.toLowerCase().includes('challenger') && event.data.token) {
-                  // Format the token criticism with proper display
-                  messageContent = `token:\n${event.data.token}`;
+                // Check if this is a challenger agent
+                if (event.data.agent_name?.toLowerCase().includes('challenger')) {
+                  let messageContent = event.data.message;
+                  if (event.data.token) {
+                    // Format the token criticism with proper display
+                    messageContent = event.data.token;
+                  }
+                  
+                  // Accumulate challenger messages with smart buffering
+                  if (messageContent && messageContent.trim()) {
+                    // Add to buffer with space if needed
+                    if (this.currentChallengerBuffer && !this.currentChallengerBuffer.endsWith(' ')) {
+                      this.currentChallengerBuffer += ' ';
+                    }
+                    this.currentChallengerBuffer += messageContent.trim();
+                    
+                    // Check if we have a complete sentence/thought
+                    if (this.isCompleteSentence(this.currentChallengerBuffer)) {
+                      this.accumulatedChallengerCriticisms.push(this.currentChallengerBuffer.trim());
+                      this.currentChallengerBuffer = '';
+                    }
+                    
+                    // Set a debounce timer to flush after 1000ms of no new messages
+                    if (this.challengerDebounceTimer) {
+                      clearTimeout(this.challengerDebounceTimer);
+                    }
+                    this.challengerDebounceTimer = setTimeout(() => {
+                      this.flushChallengerCriticisms(onAgentMessage, true);
+                    }, 1000);
+                  }
+                } else {
+                  // Non-challenger agent messages are sent immediately
+                  onAgentMessage?.(
+                    event.data.agent_name,
+                    event.data.message,
+                    event.data.agent_role,
+                    event.data.message_type
+                  );
                 }
-                
-                onAgentMessage?.(
-                  event.data.agent_name,
-                  messageContent,
-                  event.data.agent_role,
-                  event.data.message_type
-                );
                 break;
 
               case 'agent_debate':
@@ -300,36 +406,44 @@ export class KognysStreamChatTransport {
               case 'criticisms_received':
                 // Handle Challenger agent feedback with details
                 if (agentName === 'challenger' || event.data.agent === 'challenger') {
-                  let criticismMessage = '';
+                  let criticismMessages: string[] = [];
                   
                   // Check if we have token criticism first
                   if (event.data.token) {
-                    criticismMessage = event.data.token; // Just the token content, no prefix
+                    criticismMessages.push(event.data.token);
                   } else if (event.data.criticisms && Array.isArray(event.data.criticisms)) {
-                    // Handle array of criticisms - just show the criticisms without the generic intro
-                    event.data.criticisms.forEach((criticism: any, index: number) => {
-                      criticismMessage += `🔍 **Issue ${index + 1}**: ${criticism.issue || criticism}\n`;
-                      if (criticism.suggestion) {
-                        criticismMessage += `   💡 Suggestion: ${criticism.suggestion}\n`;
+                    // Handle array of criticisms - format each one
+                    event.data.criticisms.forEach((criticism: any) => {
+                      let formattedCriticism = '';
+                      if (criticism.issue || typeof criticism === 'string') {
+                        formattedCriticism = `🔍 ${criticism.issue || criticism}`;
+                        if (criticism.suggestion) {
+                          formattedCriticism += `\n💡 Suggestion: ${criticism.suggestion}`;
+                        }
+                        if (criticism.severity) {
+                          formattedCriticism += `\n⚡ Severity: ${criticism.severity}`;
+                        }
+                        criticismMessages.push(formattedCriticism);
                       }
-                      if (criticism.severity) {
-                        criticismMessage += `   ⚡ Severity: ${criticism.severity}\n`;
-                      }
-                      criticismMessage += '\n';
                     });
                   } else if (event.data.criticism_summary) {
-                    criticismMessage = event.data.criticism_summary; // Just the summary, no intro
+                    criticismMessages.push(event.data.criticism_summary);
                   }
                   
-                  // Only send message if we have actual criticism content
-                  if (criticismMessage.trim()) {
-                    onAgentMessage?.(
-                      'Challenger',
-                      criticismMessage.trim(),
-                      'The Peer Reviewer',
-                      'analyzing'
-                    );
+                  // Accumulate all criticism messages
+                  criticismMessages.forEach(msg => {
+                    if (msg && msg.trim()) {
+                      this.accumulatedChallengerCriticisms.push(msg.trim());
+                    }
+                  });
+                  
+                  // Set a debounce timer to flush after 500ms of no new messages
+                  if (this.challengerDebounceTimer) {
+                    clearTimeout(this.challengerDebounceTimer);
                   }
+                  this.challengerDebounceTimer = setTimeout(() => {
+                    this.flushChallengerCriticisms(onAgentMessage);
+                  }, 500);
                 }
                 break;
                 
@@ -362,12 +476,25 @@ export class KognysStreamChatTransport {
                 // Handle criticism token from challenger
                 
                 if (event.data.agent?.toLowerCase().includes('challenger') && event.data.token) {
-                  onAgentMessage?.(
-                    'Challenger',
-                    event.data.token, // Just the token content, no prefix
-                    'The Peer Reviewer',
-                    'criticisms_received'
-                  );
+                  // Add to buffer with space if needed
+                  if (this.currentChallengerBuffer && !this.currentChallengerBuffer.endsWith(' ')) {
+                    this.currentChallengerBuffer += ' ';
+                  }
+                  this.currentChallengerBuffer += event.data.token.trim();
+                  
+                  // Check if we have a complete sentence/thought
+                  if (this.isCompleteSentence(this.currentChallengerBuffer)) {
+                    this.accumulatedChallengerCriticisms.push(this.currentChallengerBuffer.trim());
+                    this.currentChallengerBuffer = '';
+                  }
+                  
+                  // Set a debounce timer to flush after 1000ms of no new messages
+                  if (this.challengerDebounceTimer) {
+                    clearTimeout(this.challengerDebounceTimer);
+                  }
+                  this.challengerDebounceTimer = setTimeout(() => {
+                    this.flushChallengerCriticisms(onAgentMessage, true);
+                  }, 1000);
                 }
                 break;
                 
@@ -404,6 +531,8 @@ export class KognysStreamChatTransport {
             }
           },
           onComplete: () => {
+            // Force flush any remaining challenger criticisms before completing
+            this.flushChallengerCriticisms(onAgentMessage, true);
             onComplete?.(fullResponse, this.currentTransactionHash || undefined);
           },
           onError: (error) => {
