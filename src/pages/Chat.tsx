@@ -36,23 +36,52 @@ const Chat = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [showReasoning, setShowReasoning] = useState(() => {
     const savedState = localStorage.getItem('kognys_show_reasoning');
-    return savedState !== null ? JSON.parse(savedState) : true;
+    return savedState !== null ? JSON.parse(savedState) : false;
   });
   
   // Refs for scrolling
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageCountRef = useRef(0);
-
+  const userHasScrolledRef = useRef(false);
+  const isAutoScrollingRef = useRef(false);
+  
+  // Load messages from chat store when currentChat changes
+  const [loadedMessages, setLoadedMessages] = useState<typeof currentChat.messages>([]);
+  const stopRef = useRef<(() => void) | null>(null);
 
   // Initialize or get existing chat
   useEffect(() => {
     setIsInitializing(true);
     
     // Stop any ongoing streaming when switching chats
-    if (stop) {
-      stop();
+    if (stopRef.current) {
+      stopRef.current();
     }
+    
+    // Clean up old streaming progress entries (older than 24 hours)
+    const cleanupStreamingProgress = () => {
+      const keys = Object.keys(localStorage);
+      const now = Date.now();
+      const dayInMs = 24 * 60 * 60 * 1000;
+      
+      keys.forEach(key => {
+        if (key.startsWith('streaming_progress_')) {
+          try {
+            const data = JSON.parse(localStorage.getItem(key) || '{}');
+            // Remove entries without timestamp (old format) or older than 24 hours
+            if (!data.timestamp || (now - data.timestamp) > dayInMs) {
+              localStorage.removeItem(key);
+            }
+          } catch {
+            // Remove invalid entries
+            localStorage.removeItem(key);
+          }
+        }
+      });
+    };
+    
+    cleanupStreamingProgress();
     
     if (chatId) {
       let chat = chatStore.getChat(chatId);
@@ -65,8 +94,6 @@ const Chat = () => {
     // If no chatId, don't redirect - just stay on the current route
     setIsInitializing(false);
   }, [chatId]);
-  // Load messages from chat store when currentChat changes
-  const [loadedMessages, setLoadedMessages] = useState<typeof currentChat.messages>([]);
   
   useEffect(() => {
     if (currentChat?.messages) {
@@ -100,6 +127,11 @@ const Chat = () => {
     }
   });
   
+  // Update stopRef when stop function changes
+  useEffect(() => {
+    stopRef.current = stop;
+  }, [stop]);
+  
   // Cleanup on unmount or chat change
   useEffect(() => {
     return () => {
@@ -112,6 +144,8 @@ const Chat = () => {
   
   // Wrap handleSubmit to add scrolling
   const handleSubmit = async (e: React.FormEvent) => {
+    // Reset user scroll flag when sending a new message
+    userHasScrolledRef.current = false;
     await originalHandleSubmit(e);
     // Scroll to bottom when submitting
     setTimeout(() => scrollToBottom(), 100);
@@ -201,8 +235,13 @@ const Chat = () => {
 
   // Smooth scroll to bottom function
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    if (messagesEndRef.current) {
+    if (messagesEndRef.current && !userHasScrolledRef.current) {
+      isAutoScrollingRef.current = true;
       messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+      // Reset the auto-scrolling flag after animation completes
+      setTimeout(() => {
+        isAutoScrollingRef.current = false;
+      }, behavior === 'smooth' ? 500 : 0);
     }
   };
 
@@ -275,7 +314,27 @@ const Chat = () => {
         
         {/* Messages Area */}
         <div className="flex-1 overflow-hidden pb-24">
-          <ScrollArea ref={scrollAreaRef} className="h-full">
+          <ScrollArea 
+            ref={scrollAreaRef} 
+            className="h-full"
+            onScrollPositionChange={(position) => {
+              if (!isAutoScrollingRef.current) {
+                const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+                if (scrollContainer) {
+                  const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+                  const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+                  
+                  // If user scrolled away from bottom, set flag
+                  if (!isNearBottom) {
+                    userHasScrolledRef.current = true;
+                  } else {
+                    // If user scrolled back to bottom, reset flag
+                    userHasScrolledRef.current = false;
+                  }
+                }
+              }
+            }}
+          >
             <div className="w-full flex justify-center">
               <div className="w-full max-w-4xl px-6 py-16">
             {visibleMessages.length === 0 ? (
@@ -407,7 +466,9 @@ const Chat = () => {
                                 <div className="prose prose-neutral dark:prose-invert max-w-none">
                                   <StreamingText
                                     content={message.content}
+                                    messageId={message.id}
                                     isStreaming={status === 'streaming' && messages.findIndex(m => m.id === message.id) === messages.length - 1}
+                                    onProgress={scrollToBottom}
                                   />
                                 </div>
                               </div>
