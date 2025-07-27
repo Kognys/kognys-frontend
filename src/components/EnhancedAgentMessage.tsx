@@ -37,7 +37,7 @@ const getAgentColorScheme = (name: string) => {
       gradient: 'from-emerald-500 to-emerald-600',
       border: 'border-emerald-400',
       text: 'text-emerald-600 dark:text-emerald-400',
-      bg: 'bg-blue-50 dark:bg-blue-950/30'
+      bg: ''
     },
     'synthesizer': {
       gradient: 'from-amber-500 to-amber-600',
