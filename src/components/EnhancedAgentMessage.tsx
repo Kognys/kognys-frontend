@@ -378,7 +378,7 @@ export const EnhancedAgentThreadContainer = ({
       {messages.map((message, index) => {
         const isReply = index > 0;
         const prevMessage = index > 0 ? messages[index - 1] : null;
-        const showConnector = isReply && prevMessage?.agentName !== message.agentName;
+        const showConnector = false; // Disable connector lines in EnhancedAgentMessage
         
         return (
           <EnhancedAgentMessage
