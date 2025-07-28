@@ -49,10 +49,7 @@ const Chat = () => {
   
   // Refs for scrolling
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageCountRef = useRef(0);
-  const userHasScrolledRef = useRef(false);
-  const isAutoScrollingRef = useRef(false);
   
   // Load messages from chat store when currentChat changes
   const [loadedMessages, setLoadedMessages] = useState<typeof currentChat.messages>([]);
@@ -134,7 +131,7 @@ const Chat = () => {
     stop,
     isLoading 
   } = useKognysChat({
-    throttle: 50,
+    throttle: 10,
     initialMessages: loadedMessages,
     onMessage: (message) => {
       // Save message to chat store (excluding temporary status messages)
@@ -166,8 +163,6 @@ const Chat = () => {
   
   // Wrap handleSubmit to add scrolling
   const handleSubmit = async (e: React.FormEvent) => {
-    // When sending a new message, allow auto-scroll to resume
-    userHasScrolledRef.current = false;
     
     // Reset manual toggle flag and show reasoning for new queries
     setUserHasManuallyToggled(false);
@@ -176,8 +171,6 @@ const Chat = () => {
     }
     
     await originalHandleSubmit(e);
-    // Scroll to bottom when submitting
-    setTimeout(() => scrollToBottom(), 100);
   };
   
   useEffect(() => {
@@ -224,43 +217,8 @@ const Chat = () => {
     
     // Don't auto-scroll when user manually toggles
     // They might want to read from their current position
-    // Temporarily disable auto-scrolling to prevent layout shift from triggering scroll
-    const currentUserScrollState = userHasScrolledRef.current;
-    userHasScrolledRef.current = true;
-    
-    // Re-enable auto-scrolling after a short delay if user was previously at bottom
-    setTimeout(() => {
-      if (!currentUserScrollState) {
-        userHasScrolledRef.current = false;
-      }
-    }, 300);
   };
 
-  // Setup scroll detection
-  useEffect(() => {
-    const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    if (!scrollContainer) return;
-
-    const handleScroll = () => {
-      if (!isAutoScrollingRef.current) {
-        const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-        const isNearBottom = distanceFromBottom < 100;
-        
-        // If user scrolled away from bottom (more than 150px), set flag
-        // Using a threshold to avoid false positives from small layout changes
-        if (!isNearBottom && distanceFromBottom > 150) {
-          userHasScrolledRef.current = true;
-        } else if (distanceFromBottom < 50 && userHasScrolledRef.current) {
-          // If user manually scrolled very close to bottom, reset flag
-          userHasScrolledRef.current = false;
-        }
-      }
-    };
-
-    scrollContainer.addEventListener('scroll', handleScroll);
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, [chatId]); // Re-attach when chat changes
 
   // Process messages and group agent conversations
   const { visibleMessages, agentThreads, phaseIndicators } = useMemo(() => {
@@ -316,47 +274,11 @@ const Chat = () => {
     return { visibleMessages: visible, agentThreads: threads, phaseIndicators: phases };
   }, [messages, showReasoning]);
 
-  // Smooth scroll to bottom function
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    if (messagesEndRef.current && !userHasScrolledRef.current) {
-      isAutoScrollingRef.current = true;
-      messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
-      // Reset the auto-scrolling flag after animation completes
-      setTimeout(() => {
-        isAutoScrollingRef.current = false;
-      }, behavior === 'smooth' ? 500 : 0);
-    }
-  };
 
-  // Auto-scroll when new messages arrive
+  // Update message count
   useEffect(() => {
-    // Check if we have new messages
-    if (messages.length > lastMessageCountRef.current) {
-      // Only auto-scroll if user is near the bottom or if it's a reasoning message
-      const shouldScroll = () => {
-        if (!scrollAreaRef.current) return true;
-        
-        const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-        if (!scrollContainer) return true;
-        
-        const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-        const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-        
-        // Always scroll for agent messages when visible
-        const lastMessage = messages[messages.length - 1];
-        const isAgentMessage = lastMessage && lastMessage.role === 'agent';
-        
-        return isNearBottom || (isAgentMessage && showReasoning);
-      };
-      
-      if (shouldScroll()) {
-        // Use a small delay to ensure DOM has updated
-        setTimeout(() => scrollToBottom(), 100);
-      }
-    }
-    
     lastMessageCountRef.current = messages.length;
-  }, [messages, showReasoning]);
+  }, [messages]);
 
   if (isInitializing) {
     return <PageLoader />;
@@ -534,7 +456,6 @@ const Chat = () => {
                                     content={message.content}
                                     messageId={message.id}
                                     isStreaming={status === 'streaming' && messages.findIndex(m => m.id === message.id) === messages.length - 1}
-                                    onProgress={scrollToBottom}
                                   />
                                 </div>
                               </div>
@@ -567,7 +488,7 @@ const Chat = () => {
               </div>
             )}
               {/* Scroll anchor */}
-              <div ref={messagesEndRef} className="h-4" />
+              <div className="h-4" />
               </div>
             </div>
           </ScrollArea>

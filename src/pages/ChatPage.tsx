@@ -45,7 +45,7 @@ const ChatPage = () => {
     stop,
     isLoading 
   } = useKognysChat({
-    throttle: 50,
+    throttle: 10,
     initialMessages: currentChat?.messages || [],
     onMessage: (message) => {
       // Save message to chat store
