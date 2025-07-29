@@ -235,7 +235,7 @@ export function useKognysChat({
             // If we have a transaction hash, append it to the content with BSC testnet link
             if (transactionHash) {
               const bscTestnetUrl = `https://testnet.bscscan.com/tx/${transactionHash}`;
-              finalContent += `\n\n---\n\n**Transaction Hash:** [\`${transactionHash}\`](${bscTestnetUrl})`;
+              finalContent += `\n\n---\n\n![BNB Logo](/bnb-bnb-logo.png) **Transaction Hash:** [\`${transactionHash}\`](${bscTestnetUrl})`;
             }
             
             // Update the existing streaming message or add new one
@@ -268,7 +268,7 @@ export function useKognysChat({
           let finalContentForCallback = fullResponse;
           if (transactionHash) {
             const bscTestnetUrl = `https://testnet.bscscan.com/tx/${transactionHash}`;
-            finalContentForCallback += `\n\n---\n\n**Transaction Hash:** [\`${transactionHash}\`](${bscTestnetUrl})`;
+            finalContentForCallback += `\n\n---\n\n![BNB Logo](/bnb-bnb-logo.png) **Transaction Hash:** [\`${transactionHash}\`](${bscTestnetUrl})`;
           }
           
           // Notify parent component about assistant message with transaction hash
