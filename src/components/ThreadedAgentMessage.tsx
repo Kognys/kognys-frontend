@@ -191,7 +191,13 @@ export const ThreadedAgentMessage = ({
                     <code className="px-1.5 py-0.5 rounded bg-muted text-xs font-medium" {...props} />
                   ) : (
                     <code {...props} />
-                  )
+                  ),
+                img: ({node, ...props}) => (
+                  <img 
+                    className="inline-block w-5 h-5 mr-1 align-text-bottom" 
+                    {...props} 
+                  />
+                )
               }}
             >
               {message}

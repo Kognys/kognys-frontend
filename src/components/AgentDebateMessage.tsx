@@ -121,7 +121,13 @@ export const AgentDebateMessage = ({
               ul: ({node, ...props}) => <ul className="list-disc list-inside ml-2 space-y-1 mb-2" {...props} />,
               ol: ({node, ...props}) => <ol className="list-decimal list-inside ml-2 space-y-1 mb-2" {...props} />,
               li: ({node, ...props}) => <li className="text-sm" {...props} />,
-              blockquote: ({node, ...props}) => <blockquote className="border-l-2 border-primary/30 pl-2 my-2 italic text-muted-foreground text-sm" {...props} />
+              blockquote: ({node, ...props}) => <blockquote className="border-l-2 border-primary/30 pl-2 my-2 italic text-muted-foreground text-sm" {...props} />,
+              img: ({node, ...props}) => (
+                <img 
+                  className="inline-block w-5 h-5 mr-1 align-text-bottom" 
+                  {...props} 
+                />
+              )
             }}
           >
             {message}
