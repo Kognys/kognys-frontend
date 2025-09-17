@@ -325,13 +325,24 @@ export class KognysStreamChatTransport {
                 break;
 
               case 'research_completed': {
+                console.log('[DEBUG] research_completed event data:', event.data);
                 this.currentPaperId = event.data.paper_id;
                 // Extract hash from verifiable_data
                 const verifiableData = event.data.verifiable_data;
                 this.currentTransactionHash = verifiableData?.finish_task_txn_hash || null;
+                console.log('[DEBUG] Extracted transaction hash:', this.currentTransactionHash);
+                
+                // If we have a real transaction hash (not async_pending), add it to the response
+                if (this.currentTransactionHash && this.currentTransactionHash !== 'async_pending') {
+                  // Add transaction information to the response
+                  const transactionInfo = `\n\n---\n\n✅ **Transaction succeeded:** ${this.currentTransactionHash}`;
+                  fullResponse += transactionInfo;
+                  onChunk?.(transactionInfo);
+                  console.log('[DEBUG] Added transaction to response:', this.currentTransactionHash);
+                }
                 
                 // Store transaction hash in localStorage for persistence
-                if (this.currentTransactionHash) {
+                if (this.currentTransactionHash && this.currentTransactionHash !== 'async_pending') {
                   const transactionHashes = JSON.parse(localStorage.getItem('kognys_transaction_hashes') || '{}');
                   // Store by timestamp since we might not have a stable paper ID
                   const key = `tx_${Date.now()}_${this.currentPaperId || 'unknown'}`;
