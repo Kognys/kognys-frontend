@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { cn } from '@/lib/utils';
 
 interface StreamingTextProps {
   content: string;
@@ -15,104 +14,25 @@ export const StreamingText = ({
   content, 
   messageId,
   isStreaming = false,
-  speed = 3,
+  speed = 1,
   onComplete,
   onProgress
 }: StreamingTextProps) => {
-  // Check localStorage for saved progress
-  const getStoredProgress = () => {
-    const stored = localStorage.getItem(`streaming_progress_${messageId}`);
-    if (stored) {
-      const { index, completed } = JSON.parse(stored);
-      return { index, completed };
-    }
-    return { index: 0, completed: false };
-  };
-
-  const storedProgress = getStoredProgress();
-  
-  const [displayedContent, setDisplayedContent] = useState(() => {
-    // If animation was completed before, show full content
-    if (storedProgress.completed) {
-      return content;
-    }
-    // Otherwise show content up to stored index
-    return content.slice(0, storedProgress.index);
-  });
+  const [displayedContent, setDisplayedContent] = useState(content);
   const [isAnimating, setIsAnimating] = useState(false);
-  const indexRef = useRef(storedProgress.index);
-  const animationRef = useRef<number>();
 
   useEffect(() => {
-    // If we're streaming from the server, just show content as is
-    if (isStreaming) {
-      setDisplayedContent(content);
-      return;
-    }
-
-    // If content hasn't changed significantly, don't re-animate
-    if (displayedContent === content) {
-      return;
-    }
-
-    // Check if this is a new complete message or we should continue from stored progress
-    const shouldAnimate = content && !storedProgress.completed && indexRef.current < content.length;
+    // Always show full content immediately - no typing animation
+    setDisplayedContent(content);
     
-    if (shouldAnimate) {
+    // If streaming, show cursor animation
+    if (isStreaming && content) {
       setIsAnimating(true);
-
-      const animate = () => {
-        if (indexRef.current < content.length) {
-          setDisplayedContent(content.slice(0, indexRef.current + 1));
-          indexRef.current++;
-          
-          // Save progress to localStorage
-          localStorage.setItem(`streaming_progress_${messageId}`, JSON.stringify({
-            index: indexRef.current,
-            completed: false,
-            timestamp: Date.now()
-          }));
-          
-          // Call onProgress every 15 characters for smooth scrolling
-          if (indexRef.current % 15 === 0) {
-            onProgress?.();
-          }
-          
-          animationRef.current = requestAnimationFrame(() => {
-            setTimeout(animate, speed);
-          });
-        } else {
-          // Animation completed
-          setIsAnimating(false);
-          localStorage.setItem(`streaming_progress_${messageId}`, JSON.stringify({
-            index: content.length,
-            completed: true,
-            timestamp: Date.now()
-          }));
-          onComplete?.();
-        }
-      };
-
-      animate();
-    } else if (content && storedProgress.completed) {
-      // Content was already completed, just show it
-      setDisplayedContent(content);
+    } else {
+      setIsAnimating(false);
+      onComplete?.();
     }
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-      // Save current progress when unmounting
-      if (isAnimating && indexRef.current > 0 && indexRef.current < content.length) {
-        localStorage.setItem(`streaming_progress_${messageId}`, JSON.stringify({
-          index: indexRef.current,
-          completed: false,
-          timestamp: Date.now()
-        }));
-      }
-    };
-  }, [content, messageId, isStreaming, speed, onComplete, onProgress, storedProgress.completed]);
+  }, [content, isStreaming, onComplete]);
 
   return (
     <>

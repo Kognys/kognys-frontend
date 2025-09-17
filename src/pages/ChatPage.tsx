@@ -140,7 +140,7 @@ const ChatPage = () => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">You</div>
-                            <div className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
+                            <div className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap select-text" style={{ userSelect: 'text' }}>
                               {message.content}
                             </div>
                           </div>
@@ -152,7 +152,7 @@ const ChatPage = () => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Kognys</div>
-                            <div className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed">
+                            <div className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed select-text" style={{ userSelect: 'text' }}>
                               <ReactMarkdown
                                 components={{
                                   p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
@@ -164,6 +164,8 @@ const ChatPage = () => {
                                   li: ({ children }) => <li className="text-sm">{children}</li>,
                                   code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>,
                                   pre: ({ children }) => <pre className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg text-xs font-mono overflow-x-auto mb-3">{children}</pre>,
+                                  a: ({ children, href, ...props }) => <a className="text-blue-600 dark:text-blue-400 hover:underline" href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>,
+                                  img: ({ src, alt, ...props }) => <img className="inline-block w-5 h-5 mr-1 align-text-bottom" src={src} alt={alt} {...props} />
                                 }}
                               >
                                 {message.content}

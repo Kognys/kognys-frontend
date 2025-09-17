@@ -136,8 +136,29 @@ export function useKognysChat({
           setStatus('streaming');
           setStreamingMessageId(assistantMessageId);
           
-          // Just accumulate the response, don't display it yet
+          // Accumulate the response
           accumulatedResponseRef.current += chunk;
+          
+          // Update the message in real-time during streaming
+          setMessages(prev => {
+            const existingIndex = prev.findIndex(msg => msg.id === assistantMessageId);
+            if (existingIndex >= 0) {
+              const updated = [...prev];
+              updated[existingIndex] = {
+                ...updated[existingIndex],
+                content: accumulatedResponseRef.current,
+              };
+              return updated;
+            } else {
+              // Add new assistant message if it doesn't exist
+              return [...prev, {
+                id: assistantMessageId,
+                role: 'assistant',
+                content: accumulatedResponseRef.current,
+                timestamp: Date.now(),
+              }];
+            }
+          });
         },
         onStatus: (statusText: string, eventType: string) => {
           if (!showStatusMessages || abortControllerRef.current?.signal.aborted) return;

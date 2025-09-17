@@ -386,7 +386,7 @@ const Chat = () => {
                             <div className="flex items-start gap-4 justify-end">
                               <div className="text-right">
                                 <div className="inline-block text-sm font-medium text-primary/80 mb-2">You</div>
-                                <div className="text-foreground/90 text-lg font-medium leading-relaxed">
+                                <div className="text-foreground/90 text-lg font-medium leading-relaxed select-text" style={{ userSelect: 'text' }}>
                                   {message.content}
                                 </div>
                               </div>
@@ -451,7 +451,7 @@ const Chat = () => {
                               </div>
                               <div className="flex-1">
                                 <div className="text-sm font-medium text-muted-foreground/80 mb-3">Kognys Agent</div>
-                                <div className="prose prose-neutral dark:prose-invert max-w-none">
+                                <div className="prose prose-neutral dark:prose-invert max-w-none select-text" style={{ userSelect: 'text' }}>
                                   <StreamingText
                                     content={message.content}
                                     messageId={message.id}
