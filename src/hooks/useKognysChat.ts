@@ -254,9 +254,12 @@ export function useKognysChat({
             let finalContent = fullResponse;
             
             // If we have a transaction hash, append it to the content with BSC testnet link
-            if (transactionHash) {
+            // Skip if the hash is "async_pending" as it means the transaction is still processing
+            if (transactionHash && transactionHash !== 'async_pending') {
               const bscTestnetUrl = `https://testnet.bscscan.com/tx/${transactionHash}`;
               finalContent += `\n\n---\n\n![BNB Logo](/bnb-bnb-logo.png) **Transaction Hash:** [\`${transactionHash}\`](${bscTestnetUrl})`;
+            } else if (transactionHash === 'async_pending') {
+              finalContent += `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...`;
             }
             
             // Update the existing streaming message or add new one
@@ -287,9 +290,11 @@ export function useKognysChat({
           
           // Build final content with transaction hash link if available
           let finalContentForCallback = fullResponse;
-          if (transactionHash) {
+          if (transactionHash && transactionHash !== 'async_pending') {
             const bscTestnetUrl = `https://testnet.bscscan.com/tx/${transactionHash}`;
             finalContentForCallback += `\n\n---\n\n![BNB Logo](/bnb-bnb-logo.png) **Transaction Hash:** [\`${transactionHash}\`](${bscTestnetUrl})`;
+          } else if (transactionHash === 'async_pending') {
+            finalContentForCallback += `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...`;
           }
           
           // Notify parent component about assistant message with transaction hash
