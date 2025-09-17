@@ -551,7 +551,17 @@ export class KognysStreamChatTransport {
           onComplete: () => {
             // Force flush any remaining challenger criticisms before completing
             this.flushChallengerCriticisms(onAgentMessage, true);
-            onComplete?.(fullResponse, this.currentTransactionHash || undefined);
+            
+            // Extract transaction hash from response if present
+            let finalTransactionHash = this.currentTransactionHash;
+            
+            // Look for transaction hash in the response text (0x followed by 64 hex characters)
+            const txHashMatch = fullResponse.match(/0x[a-fA-F0-9]{64}/);
+            if (txHashMatch) {
+              finalTransactionHash = txHashMatch[0];
+            }
+            
+            onComplete?.(fullResponse, finalTransactionHash || undefined);
           },
           onError: (error) => {
             console.error('Stream error:', error);
