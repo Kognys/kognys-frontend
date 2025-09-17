@@ -340,6 +340,12 @@ export class KognysStreamChatTransport {
                 this.currentTransactionHash = verifiableData?.finish_task_txn_hash || null;
                 console.log('[DEBUG] Extracted transaction hash:', this.currentTransactionHash);
                 
+                // Check if there's a task_id we can use
+                const taskId = event.data.task_id || verifiableData?.task_id;
+                if (taskId) {
+                  console.log('[DEBUG] Found task_id:', taskId);
+                }
+                
                 // If we have a real transaction hash (not async_pending), add it to the response
                 if (this.currentTransactionHash && this.currentTransactionHash !== 'async_pending') {
                   // Add transaction information to the response
@@ -347,6 +353,12 @@ export class KognysStreamChatTransport {
                   fullResponse += transactionInfo;
                   onChunk?.(transactionInfo);
                   console.log('[DEBUG] Added transaction to response:', this.currentTransactionHash);
+                } else if (this.currentTransactionHash === 'async_pending') {
+                  // Transaction is pending - add a placeholder that we'll update later
+                  const pendingInfo = `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...`;
+                  fullResponse += pendingInfo;
+                  onChunk?.(pendingInfo);
+                  console.log('[DEBUG] Transaction is async_pending, added placeholder');
                 }
                 
                 // Store transaction hash in localStorage for persistence

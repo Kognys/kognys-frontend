@@ -281,7 +281,7 @@ export function useKognysChat({
             } else if (transactionHash === 'async_pending' && !txHashInContent) {
               console.log('[DEBUG] Case 3: async_pending and no hash in content');
               // Only show processing message if no actual hash found
-              finalContent += `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...`;
+              finalContent += `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...\n\n*The transaction has been submitted and will be confirmed shortly. The transaction hash will be available once the blockchain confirms it.*`;
             } else {
               console.log('[DEBUG] Case 4: Other case - transactionHash:', transactionHash, 'txHashInContent:', !!txHashInContent);
             }
