@@ -141,6 +141,14 @@ export class KognysStreamChatTransport {
           lastUserMessage.content,
         {
           onEvent: (event: SSEEvent) => {
+            // Log ALL events to see what we're receiving
+            console.log('[DEBUG] SSE Event received:', {
+              type: event.event_type,
+              data: event.data,
+              agent: (event as SSEEvent & { agent?: string }).agent,
+              timestamp: new Date().toISOString()
+            });
+            
             // Extract agent information from the event
             const agentName = (event as SSEEvent & { agent?: string }).agent || (event.data as { agent?: string }).agent;
             
@@ -550,11 +558,29 @@ export class KognysStreamChatTransport {
               }
                 
               default:
-                // Unknown event type
-                // Check if it might be an agent-related event with different naming
+                // Unknown event type - log it for debugging
+                console.log('[DEBUG] Unhandled event type:', event.event_type, 'with data:', event.data);
+                
+                // Check if it might contain transaction information
                 if (event.data && typeof event.data === 'object') {
-                  if ('agent' in event.data || 'agent_name' in event.data) {
-                    // Possible agent event with different structure
+                  // Check for transaction hash in various possible fields
+                  const possibleHashFields = ['transaction_hash', 'txn_hash', 'tx_hash', 'hash', 'transactionHash'];
+                  for (const field of possibleHashFields) {
+                    if (event.data[field]) {
+                      console.log('[DEBUG] Found potential transaction hash in unhandled event:', field, '=', event.data[field]);
+                    }
+                  }
+                  
+                  // Check if message contains transaction info
+                  if (event.data.message && typeof event.data.message === 'string') {
+                    const txMatch = event.data.message.match(/(?:Transaction|Task).*?([a-fA-F0-9]{64}|0x[a-fA-F0-9]{64})/i);
+                    if (txMatch) {
+                      console.log('[DEBUG] Found transaction in message of unhandled event:', txMatch[0]);
+                      // Add it to the response
+                      const txInfo = `\n\n${event.data.message}`;
+                      fullResponse += txInfo;
+                      onChunk?.(txInfo);
+                    }
                   }
                 }
             }
