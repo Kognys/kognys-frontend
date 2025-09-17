@@ -253,8 +253,8 @@ export function useKognysChat({
             // Build the final content
             let finalContent = fullResponse;
             
-            // Check if transaction hash is already in the content
-            const txHashInContent = fullResponse.match(/0x[a-fA-F0-9]{64}/);
+            // Check if transaction hash is already in the content (with or without 0x prefix)
+            const txHashInContent = fullResponse.match(/(0x)?[a-fA-F0-9]{64}/i);
             
             // If we have a transaction hash, append it to the content with BSC testnet link
             // Skip if already in content
@@ -263,12 +263,15 @@ export function useKognysChat({
               finalContent += `\n\n---\n\n![BNB Logo](/bnb-bnb-logo.png) **Transaction Hash:** [\`${transactionHash}\`](${bscTestnetUrl})`;
             } else if (transactionHash && transactionHash !== 'async_pending' && txHashInContent) {
               // Transaction hash is in the content, make it clickable
-              finalContent = finalContent.replace(/Transaction Hash:\s*(0x[a-fA-F0-9]{64})/g, (match, hash) => {
-                const bscTestnetUrl = `https://testnet.bscscan.com/tx/${hash}`;
-                return `Transaction Hash: [\`${hash}\`](${bscTestnetUrl})`;
+              // Handle both "Transaction Hash:" and "Transaction succeeded:" formats
+              finalContent = finalContent.replace(/Transaction (Hash|succeeded):\s*([a-fA-F0-9]{64}|0x[a-fA-F0-9]{64})/gi, (match, type, hash) => {
+                // Add 0x prefix if not present
+                const formattedHash = hash.startsWith('0x') ? hash : `0x${hash}`;
+                const bscTestnetUrl = `https://testnet.bscscan.com/tx/${formattedHash}`;
+                return `Transaction ${type}: [\`${formattedHash}\`](${bscTestnetUrl})`;
               });
               // Add BNB logo if present
-              finalContent = finalContent.replace(/🔗\s*Transaction Hash:/g, '![BNB Logo](/bnb-bnb-logo.png) Transaction Hash:');
+              finalContent = finalContent.replace(/🔗\s*Transaction (Hash|succeeded):/gi, '![BNB Logo](/bnb-bnb-logo.png) Transaction $1:');
             } else if (transactionHash === 'async_pending' && !txHashInContent) {
               // Only show processing message if no actual hash found
               finalContent += `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...`;
@@ -302,19 +305,22 @@ export function useKognysChat({
           
           // Build final content with transaction hash link if available
           let finalContentForCallback = fullResponse;
-          const txHashInCallback = fullResponse.match(/0x[a-fA-F0-9]{64}/);
+          const txHashInCallback = fullResponse.match(/(0x)?[a-fA-F0-9]{64}/i);
           
           if (transactionHash && transactionHash !== 'async_pending' && !txHashInCallback) {
             const bscTestnetUrl = `https://testnet.bscscan.com/tx/${transactionHash}`;
             finalContentForCallback += `\n\n---\n\n![BNB Logo](/bnb-bnb-logo.png) **Transaction Hash:** [\`${transactionHash}\`](${bscTestnetUrl})`;
           } else if (transactionHash && transactionHash !== 'async_pending' && txHashInCallback) {
             // Transaction hash is in the content, make it clickable
-            finalContentForCallback = finalContentForCallback.replace(/Transaction Hash:\s*(0x[a-fA-F0-9]{64})/g, (match, hash) => {
-              const bscTestnetUrl = `https://testnet.bscscan.com/tx/${hash}`;
-              return `Transaction Hash: [\`${hash}\`](${bscTestnetUrl})`;
+            // Handle both "Transaction Hash:" and "Transaction succeeded:" formats
+            finalContentForCallback = finalContentForCallback.replace(/Transaction (Hash|succeeded):\s*([a-fA-F0-9]{64}|0x[a-fA-F0-9]{64})/gi, (match, type, hash) => {
+              // Add 0x prefix if not present
+              const formattedHash = hash.startsWith('0x') ? hash : `0x${hash}`;
+              const bscTestnetUrl = `https://testnet.bscscan.com/tx/${formattedHash}`;
+              return `Transaction ${type}: [\`${formattedHash}\`](${bscTestnetUrl})`;
             });
             // Add BNB logo if present
-            finalContentForCallback = finalContentForCallback.replace(/🔗\s*Transaction Hash:/g, '![BNB Logo](/bnb-bnb-logo.png) Transaction Hash:');
+            finalContentForCallback = finalContentForCallback.replace(/🔗\s*Transaction (Hash|succeeded):/gi, '![BNB Logo](/bnb-bnb-logo.png) Transaction $1:');
           } else if (transactionHash === 'async_pending' && !txHashInCallback) {
             finalContentForCallback += `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...`;
           }

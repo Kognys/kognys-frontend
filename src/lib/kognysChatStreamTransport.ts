@@ -555,10 +555,11 @@ export class KognysStreamChatTransport {
             // Extract transaction hash from response if present
             let finalTransactionHash = this.currentTransactionHash;
             
-            // Look for transaction hash in the response text (0x followed by 64 hex characters)
-            const txHashMatch = fullResponse.match(/0x[a-fA-F0-9]{64}/);
+            // Look for transaction hash in the response text (64 hex characters with or without 0x prefix)
+            const txHashMatch = fullResponse.match(/(0x)?[a-fA-F0-9]{64}/i);
             if (txHashMatch) {
-              finalTransactionHash = txHashMatch[0];
+              // Add 0x prefix if not present
+              finalTransactionHash = txHashMatch[0].startsWith('0x') ? txHashMatch[0] : `0x${txHashMatch[0]}`;
             }
             
             onComplete?.(fullResponse, finalTransactionHash || undefined);
