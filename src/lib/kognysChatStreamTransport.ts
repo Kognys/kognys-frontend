@@ -554,14 +554,23 @@ export class KognysStreamChatTransport {
             
             // Extract transaction hash from response if present
             let finalTransactionHash = this.currentTransactionHash;
+            console.log('[DEBUG] Current transaction hash from metadata:', this.currentTransactionHash);
+            console.log('[DEBUG] Full response preview:', fullResponse.slice(-500)); // Last 500 chars
             
             // Look for transaction hash in the response text (64 hex characters with or without 0x prefix)
-            const txHashMatch = fullResponse.match(/(0x)?[a-fA-F0-9]{64}/i);
+            // More specific pattern to avoid matching random hex strings
+            const txHashMatch = fullResponse.match(/(?:Transaction\s+(?:Hash|succeeded)[:\s]+)?([a-fA-F0-9]{64}|0x[a-fA-F0-9]{64})/i);
+            console.log('[DEBUG] Transaction hash match result:', txHashMatch);
+            
             if (txHashMatch) {
+              // Get the captured hash (first capture group)
+              const hash = txHashMatch[1] || txHashMatch[0];
               // Add 0x prefix if not present
-              finalTransactionHash = txHashMatch[0].startsWith('0x') ? txHashMatch[0] : `0x${txHashMatch[0]}`;
+              finalTransactionHash = hash.startsWith('0x') ? hash : `0x${hash}`;
+              console.log('[DEBUG] Extracted and formatted hash:', finalTransactionHash);
             }
             
+            console.log('[DEBUG] Final transaction hash to send:', finalTransactionHash);
             onComplete?.(fullResponse, finalTransactionHash || undefined);
           },
           onError: (error) => {

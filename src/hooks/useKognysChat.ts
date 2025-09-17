@@ -248,6 +248,9 @@ export function useKognysChat({
             return;
           }
           
+          console.log('[DEBUG useKognysChat] onComplete called with transactionHash:', transactionHash);
+          console.log('[DEBUG useKognysChat] Response preview:', fullResponse.slice(-300));
+          
           // Add the complete response message
           setMessages(prev => {
             // Build the final content
@@ -255,13 +258,16 @@ export function useKognysChat({
             
             // Check if transaction hash is already in the content (with or without 0x prefix)
             const txHashInContent = fullResponse.match(/(0x)?[a-fA-F0-9]{64}/i);
+            console.log('[DEBUG useKognysChat] Hash found in content?', txHashInContent);
             
             // If we have a transaction hash, append it to the content with BSC testnet link
             // Skip if already in content
             if (transactionHash && transactionHash !== 'async_pending' && !txHashInContent) {
+              console.log('[DEBUG] Case 1: Adding transaction hash to content');
               const bscTestnetUrl = `https://testnet.bscscan.com/tx/${transactionHash}`;
               finalContent += `\n\n---\n\n![BNB Logo](/bnb-bnb-logo.png) **Transaction Hash:** [\`${transactionHash}\`](${bscTestnetUrl})`;
             } else if (transactionHash && transactionHash !== 'async_pending' && txHashInContent) {
+              console.log('[DEBUG] Case 2: Transaction hash already in content, making it clickable');
               // Transaction hash is in the content, make it clickable
               // Handle both "Transaction Hash:" and "Transaction succeeded:" formats
               finalContent = finalContent.replace(/Transaction (Hash|succeeded):\s*([a-fA-F0-9]{64}|0x[a-fA-F0-9]{64})/gi, (match, type, hash) => {
@@ -273,8 +279,11 @@ export function useKognysChat({
               // Add BNB logo if present
               finalContent = finalContent.replace(/🔗\s*Transaction (Hash|succeeded):/gi, '![BNB Logo](/bnb-bnb-logo.png) Transaction $1:');
             } else if (transactionHash === 'async_pending' && !txHashInContent) {
+              console.log('[DEBUG] Case 3: async_pending and no hash in content');
               // Only show processing message if no actual hash found
               finalContent += `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...`;
+            } else {
+              console.log('[DEBUG] Case 4: Other case - transactionHash:', transactionHash, 'txHashInContent:', !!txHashInContent);
             }
             
             // Update the existing streaming message or add new one
