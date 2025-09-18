@@ -184,6 +184,15 @@ export interface TransactionHeartbeatEvent extends BaseSSEEvent {
   };
 }
 
+export interface TransactionUpdatedEvent extends BaseSSEEvent {
+  event_type: 'transaction_updated';
+  data: {
+    task_id: string;
+    transaction_hash: string;
+    status: string;
+  };
+}
+
 export type SSEEvent =
   | ResearchStartedEvent
   | QuestionValidatedEvent
@@ -203,7 +212,8 @@ export type SSEEvent =
   | TransactionConfirmedEvent
   | TransactionFailedEvent
   | TransactionStreamConnectedEvent
-  | TransactionHeartbeatEvent;
+  | TransactionHeartbeatEvent
+  | TransactionUpdatedEvent;
 
 // Helper function to parse SSE data line
 export function parseSSELine(line: string): SSEEvent | null {

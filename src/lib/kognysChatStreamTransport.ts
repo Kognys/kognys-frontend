@@ -355,52 +355,9 @@ export class KognysStreamChatTransport {
                   fullResponse += transactionInfo;
                   onChunk?.(transactionInfo);
                   console.log('[DEBUG] Added transaction to response:', this.currentTransactionHash);
-                } else if (this.currentTransactionHash === 'async_pending' && taskId) {
-                  // Transaction is pending - start polling for the actual hash
-                  const pendingMarker = '⏳ **Transaction Status:** Processing on blockchain...';
-                  const pendingInfo = `\n\n---\n\n${pendingMarker}`;
-                  fullResponse += pendingInfo;
-                  onChunk?.(pendingInfo);
-                  console.log('[DEBUG] Transaction is async_pending, starting transaction stream for task:', taskId);
-
-                  // Start transaction stream to get the actual hash
-                  const txAbortController = new AbortController();
-                  kognysPaperApi.streamTransaction(
-                    taskId,
-                    {
-                      onTransactionHash: (hash) => {
-                        console.log('[DEBUG] Received transaction hash from stream:', hash);
-                        // Replace the pending message with the actual hash
-                        const txConfirmedInfo = `✅ **Transaction confirmed:** [\`${hash}\`](https://testnet.bscscan.com/tx/${hash})`;
-
-                        // Replace in the fullResponse
-                        const pendingIndex = fullResponse.lastIndexOf(pendingMarker);
-                        if (pendingIndex !== -1) {
-                          fullResponse = fullResponse.substring(0, pendingIndex) + txConfirmedInfo;
-                        } else {
-                          // Fallback: just append if we can't find the marker
-                          fullResponse += `\n\n${txConfirmedInfo}`;
-                        }
-
-                        // Send a special update event to replace the pending message
-                        onChunk?.(`\n[TX_UPDATE:${hash}]`);
-                        this.currentTransactionHash = hash;
-                        // Stop the transaction stream
-                        txAbortController.abort();
-                      },
-                      onError: (error) => {
-                        console.error('[DEBUG] Transaction stream error:', error);
-                      },
-                      onComplete: () => {
-                        console.log('[DEBUG] Transaction stream completed');
-                      }
-                    },
-                    txAbortController.signal
-                  ).catch(error => {
-                    console.error('[DEBUG] Failed to start transaction stream:', error);
-                  });
                 } else if (this.currentTransactionHash === 'async_pending') {
-                  // No task_id available, just show pending message
+                  // Transaction is pending - just show pending message
+                  // The transaction_updated event will update it when the hash is ready
                   const pendingInfo = `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...`;
                   fullResponse += pendingInfo;
                   onChunk?.(pendingInfo);
@@ -593,6 +550,24 @@ export class KognysStreamChatTransport {
                 }
                 break;
                 
+              case 'transaction_updated': {
+                // Handle transaction update event - replace the pending message with actual hash
+                console.log('[DEBUG] Received transaction_updated event:', event.data);
+                const txHash = event.data.transaction_hash;
+
+                if (txHash) {
+                  // Format the hash with 0x prefix if not present
+                  const formattedHash = txHash.startsWith('0x') ? txHash : `0x${txHash}`;
+                  this.currentTransactionHash = formattedHash;
+
+                  // Send special marker to update the display
+                  const txUpdateMarker = `[TX_UPDATE:${formattedHash}]`;
+                  onChunk?.(txUpdateMarker);
+                  console.log('[DEBUG] Sent TX_UPDATE marker with hash:', formattedHash);
+                }
+                break;
+              }
+
               case 'error': {
                 const errorMessage = event.data.error || 'Unknown error occurred';
                 
