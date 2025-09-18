@@ -356,12 +356,9 @@ export class KognysStreamChatTransport {
                   onChunk?.(transactionInfo);
                   console.log('[DEBUG] Added transaction to response:', this.currentTransactionHash);
                 } else if (this.currentTransactionHash === 'async_pending') {
-                  // Transaction is pending - just show pending message
-                  // The transaction_updated event will update it when the hash is ready
-                  const pendingInfo = `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...`;
-                  fullResponse += pendingInfo;
-                  onChunk?.(pendingInfo);
-                  console.log('[DEBUG] Transaction is async_pending but no task_id available');
+                  // Transaction is pending - don't add anything here
+                  // The transaction_updated event will handle it
+                  console.log('[DEBUG] Transaction is async_pending, waiting for transaction_updated event');
                 }
                 
                 // Store transaction hash in localStorage for persistence
@@ -551,19 +548,21 @@ export class KognysStreamChatTransport {
                 break;
                 
               case 'transaction_updated': {
-                // Handle transaction update event - replace the pending message with actual hash
+                // Handle transaction update event - add the transaction hash directly
                 console.log('[DEBUG] Received transaction_updated event:', event.data);
                 const txHash = event.data.transaction_hash;
 
-                if (txHash) {
+                if (txHash && txHash !== 'async_pending') {
                   // Format the hash with 0x prefix if not present
                   const formattedHash = txHash.startsWith('0x') ? txHash : `0x${txHash}`;
                   this.currentTransactionHash = formattedHash;
 
-                  // Send special marker to update the display
-                  const txUpdateMarker = `[TX_UPDATE:${formattedHash}]`;
-                  onChunk?.(txUpdateMarker);
-                  console.log('[DEBUG] Sent TX_UPDATE marker with hash:', formattedHash);
+                  // Add the transaction hash with BNB logo and link
+                  const bscUrl = `https://testnet.bscscan.com/tx/${formattedHash}`;
+                  const txInfo = `\n\n---\n\n![BNB Logo](/bnb-bnb-logo.png) **Transaction Hash:** [\`${formattedHash}\`](${bscUrl})`;
+                  fullResponse += txInfo;
+                  onChunk?.(txInfo);
+                  console.log('[DEBUG] Added transaction hash to response:', formattedHash);
                 }
                 break;
               }

@@ -136,29 +136,8 @@ export function useKognysChat({
           setStatus('streaming');
           setStreamingMessageId(assistantMessageId);
 
-          // Check for special TX_UPDATE marker
-          const txUpdateMatch = chunk.match(/\[TX_UPDATE:([a-fA-F0-9x]+)\]/);
-          if (txUpdateMatch) {
-            const txHash = txUpdateMatch[1];
-            console.log('[DEBUG] Received TX_UPDATE with hash:', txHash);
-
-            // Replace the pending message with the confirmed transaction
-            const pendingMarker = '⏳ **Transaction Status:** Processing on blockchain...';
-            const confirmedMessage = `✅ **Transaction confirmed:** [\`${txHash}\`](https://testnet.bscscan.com/tx/${txHash})`;
-
-            // Update the accumulated response
-            const pendingIndex = accumulatedResponseRef.current.lastIndexOf(pendingMarker);
-            if (pendingIndex !== -1) {
-              // Replace from the pending marker to the end of the message
-              accumulatedResponseRef.current = accumulatedResponseRef.current.substring(0, pendingIndex) + confirmedMessage;
-            }
-
-            // Don't add the TX_UPDATE marker itself to the content
-            chunk = '';
-          } else {
-            // Normal chunk - accumulate the response
-            accumulatedResponseRef.current += chunk;
-          }
+          // Just accumulate the response normally
+          accumulatedResponseRef.current += chunk;
 
           // Update the message in real-time during streaming
           setMessages(prev => {
