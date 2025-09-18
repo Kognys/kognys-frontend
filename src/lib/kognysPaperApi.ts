@@ -213,9 +213,7 @@ export class KognysPaperApi {
     },
     signal?: AbortSignal
   ): Promise<void> {
-    console.log('[DEBUG] Starting transaction stream for task:', taskId);
-
-    try {
+try {
       const response = await fetch(`${this.baseUrl}/transactions/stream?task_id=${taskId}`, {
         method: 'GET',
         headers: {
@@ -256,15 +254,13 @@ export class KognysPaperApi {
           if (trimmedLine && trimmedLine.startsWith('data: ')) {
             const event = parseSSELine(trimmedLine);
             if (event) {
-              console.log('[DEBUG] Transaction stream event:', event);
-              callbacks.onEvent?.(event);
+callbacks.onEvent?.(event);
 
               // Handle transaction_confirmed event specifically
               if (event.event_type === 'transaction_confirmed') {
                 const hash = event.data.transaction_hash;
                 if (hash && hash !== 'async_pending') {
-                  console.log('[DEBUG] Received transaction_confirmed event with hash:', hash);
-                  callbacks.onTransactionHash?.(hash);
+callbacks.onTransactionHash?.(hash);
                 }
               }
               // Check if event contains transaction hash in other fields
@@ -278,8 +274,7 @@ export class KognysPaperApi {
                            data.finish_task_txn_hash;
 
                 if (hash && hash !== 'async_pending') {
-                  console.log('[DEBUG] Found transaction hash in stream:', hash);
-                  callbacks.onTransactionHash?.(hash);
+callbacks.onTransactionHash?.(hash);
                 }
 
                 // Also check if message contains transaction info
@@ -287,8 +282,7 @@ export class KognysPaperApi {
                   const txMatch = data.message.match(/(?:0x)?[a-fA-F0-9]{64}/);
                   if (txMatch) {
                     const extractedHash = txMatch[0].startsWith('0x') ? txMatch[0] : `0x${txMatch[0]}`;
-                    console.log('[DEBUG] Extracted transaction hash from message:', extractedHash);
-                    callbacks.onTransactionHash?.(extractedHash);
+callbacks.onTransactionHash?.(extractedHash);
                   }
                 }
               }

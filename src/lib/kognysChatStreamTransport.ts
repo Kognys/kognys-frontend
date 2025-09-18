@@ -142,15 +142,7 @@ export class KognysStreamChatTransport {
           lastUserMessage.content,
         {
           onEvent: (event: SSEEvent) => {
-            // Log ALL events to see what we're receiving
-            console.log('[DEBUG] SSE Event received:', {
-              type: event.event_type,
-              data: event.data,
-              agent: (event as SSEEvent & { agent?: string }).agent,
-              timestamp: new Date().toISOString()
-            });
-            
-            // Extract agent information from the event
+// Extract agent information from the event
             const agentName = (event as SSEEvent & { agent?: string }).agent || (event.data as { agent?: string }).agent;
             
             // Handle different event types
@@ -334,18 +326,14 @@ export class KognysStreamChatTransport {
                 break;
 
               case 'research_completed': {
-                console.log('[DEBUG] research_completed event data:', event.data);
-                this.currentPaperId = event.data.paper_id;
+this.currentPaperId = event.data.paper_id;
                 // Extract hash from verifiable_data
                 const verifiableData = event.data.verifiable_data;
                 this.currentTransactionHash = verifiableData?.finish_task_txn_hash || null;
-                console.log('[DEBUG] Extracted transaction hash:', this.currentTransactionHash);
-
-                // Check if there's a task_id we can use
+// Check if there's a task_id we can use
                 const taskId = event.data.task_id || verifiableData?.task_id;
                 if (taskId) {
-                  console.log('[DEBUG] Found task_id:', taskId);
-                  this.currentTaskId = taskId;
+this.currentTaskId = taskId;
                 }
 
                 // If we have a real transaction hash (not async_pending), add it to the response
@@ -354,12 +342,10 @@ export class KognysStreamChatTransport {
                   const transactionInfo = `\n\n---\n\n✅ **Transaction succeeded:** ${this.currentTransactionHash}`;
                   fullResponse += transactionInfo;
                   onChunk?.(transactionInfo);
-                  console.log('[DEBUG] Added transaction to response:', this.currentTransactionHash);
-                } else if (this.currentTransactionHash === 'async_pending') {
+} else if (this.currentTransactionHash === 'async_pending') {
                   // Transaction is pending - don't add anything here
                   // The transaction_updated event will handle it
-                  console.log('[DEBUG] Transaction is async_pending, waiting for transaction_updated event');
-                }
+}
                 
                 // Store transaction hash in localStorage for persistence
                 if (this.currentTransactionHash && this.currentTransactionHash !== 'async_pending') {
@@ -549,8 +535,7 @@ export class KognysStreamChatTransport {
                 
               case 'transaction_updated': {
                 // Handle transaction update event - add the transaction hash directly
-                console.log('[DEBUG] Received transaction_updated event:', event.data);
-                const txHash = event.data.transaction_hash;
+const txHash = event.data.transaction_hash;
 
                 if (txHash && txHash !== 'async_pending') {
                   // Format the hash with 0x prefix if not present
@@ -562,8 +547,7 @@ export class KognysStreamChatTransport {
                   const txInfo = `\n\n---\n\n![BNB Logo](/bnb-bnb-logo.png) **Transaction Hash:** [\`${formattedHash}\`](${bscUrl})`;
                   fullResponse += txInfo;
                   onChunk?.(txInfo);
-                  console.log('[DEBUG] Added transaction hash to response:', formattedHash);
-                }
+}
                 break;
               }
 
@@ -590,25 +574,20 @@ export class KognysStreamChatTransport {
               }
                 
               default:
-                // Unknown event type - log it for debugging
-                console.log('[DEBUG] Unhandled event type:', event.event_type, 'with data:', event.data);
-                
-                // Check if it might contain transaction information
+// Check if it might contain transaction information
                 if (event.data && typeof event.data === 'object') {
                   // Check for transaction hash in various possible fields
                   const possibleHashFields = ['transaction_hash', 'txn_hash', 'tx_hash', 'hash', 'transactionHash'];
                   for (const field of possibleHashFields) {
                     if (event.data[field]) {
-                      console.log('[DEBUG] Found potential transaction hash in unhandled event:', field, '=', event.data[field]);
-                    }
+}
                   }
                   
                   // Check if message contains transaction info
                   if (event.data.message && typeof event.data.message === 'string') {
                     const txMatch = event.data.message.match(/(?:Transaction|Task).*?([a-fA-F0-9]{64}|0x[a-fA-F0-9]{64})/i);
                     if (txMatch) {
-                      console.log('[DEBUG] Found transaction in message of unhandled event:', txMatch[0]);
-                      // Add it to the response
+// Add it to the response
                       const txInfo = `\n\n${event.data.message}`;
                       fullResponse += txInfo;
                       onChunk?.(txInfo);
@@ -620,26 +599,21 @@ export class KognysStreamChatTransport {
           onComplete: () => {
             // Force flush any remaining challenger criticisms before completing
             this.flushChallengerCriticisms(onAgentMessage, true);
-            
+
             // Extract transaction hash from response if present
             let finalTransactionHash = this.currentTransactionHash;
-            console.log('[DEBUG] Current transaction hash from metadata:', this.currentTransactionHash);
-            console.log('[DEBUG] Full response preview:', fullResponse.slice(-500)); // Last 500 chars
-            
+
             // Look for transaction hash in the response text (64 hex characters with or without 0x prefix)
             // More specific pattern to avoid matching random hex strings
             const txHashMatch = fullResponse.match(/(?:Transaction\s+(?:Hash|succeeded)[:\s]+)?([a-fA-F0-9]{64}|0x[a-fA-F0-9]{64})/i);
-            console.log('[DEBUG] Transaction hash match result:', txHashMatch);
-            
+
             if (txHashMatch) {
               // Get the captured hash (first capture group)
               const hash = txHashMatch[1] || txHashMatch[0];
               // Add 0x prefix if not present
               finalTransactionHash = hash.startsWith('0x') ? hash : `0x${hash}`;
-              console.log('[DEBUG] Extracted and formatted hash:', finalTransactionHash);
             }
-            
-            console.log('[DEBUG] Final transaction hash to send:', finalTransactionHash);
+
             onComplete?.(fullResponse, finalTransactionHash || undefined);
           },
           onError: (error) => {
