@@ -147,7 +147,44 @@ export interface HeartbeatEvent extends BaseSSEEvent {
   };
 }
 
-export type SSEEvent = 
+export interface TransactionConfirmedEvent extends BaseSSEEvent {
+  event_type: 'transaction_confirmed';
+  data: {
+    task_id: string;
+    transaction_hash: string;
+    operation: string;
+    status: string;
+  };
+}
+
+export interface TransactionFailedEvent extends BaseSSEEvent {
+  event_type: 'transaction_failed';
+  data: {
+    task_id: string;
+    error: string;
+    operation: string;
+    status: string;
+  };
+}
+
+export interface TransactionStreamConnectedEvent extends BaseSSEEvent {
+  event_type: 'transaction_stream_connected';
+  data: {
+    status: string;
+    timestamp: number;
+    task_id?: string;
+  };
+}
+
+export interface TransactionHeartbeatEvent extends BaseSSEEvent {
+  event_type: 'transaction_heartbeat';
+  data: {
+    status: string;
+    timestamp: number;
+  };
+}
+
+export type SSEEvent =
   | ResearchStartedEvent
   | QuestionValidatedEvent
   | DocumentsRetrievedEvent
@@ -162,7 +199,11 @@ export type SSEEvent =
   | FinalAnswerTokenEvent
   | CriticismTokenEvent
   | CriticismsReceivedEvent
-  | HeartbeatEvent;
+  | HeartbeatEvent
+  | TransactionConfirmedEvent
+  | TransactionFailedEvent
+  | TransactionStreamConnectedEvent
+  | TransactionHeartbeatEvent;
 
 // Helper function to parse SSE data line
 export function parseSSELine(line: string): SSEEvent | null {

@@ -259,8 +259,16 @@ export class KognysPaperApi {
               console.log('[DEBUG] Transaction stream event:', event);
               callbacks.onEvent?.(event);
 
-              // Check if event contains transaction hash
-              if (event.data) {
+              // Handle transaction_confirmed event specifically
+              if (event.event_type === 'transaction_confirmed') {
+                const hash = event.data.transaction_hash;
+                if (hash && hash !== 'async_pending') {
+                  console.log('[DEBUG] Received transaction_confirmed event with hash:', hash);
+                  callbacks.onTransactionHash?.(hash);
+                }
+              }
+              // Check if event contains transaction hash in other fields
+              else if (event.data) {
                 // Look for transaction hash in various possible fields (using any type for flexibility)
                 const data = event.data as any;
                 const hash = data.transaction_hash ||
