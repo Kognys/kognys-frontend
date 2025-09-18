@@ -357,7 +357,8 @@ export class KognysStreamChatTransport {
                   console.log('[DEBUG] Added transaction to response:', this.currentTransactionHash);
                 } else if (this.currentTransactionHash === 'async_pending' && taskId) {
                   // Transaction is pending - start polling for the actual hash
-                  const pendingInfo = `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...`;
+                  const pendingMarker = '⏳ **Transaction Status:** Processing on blockchain...';
+                  const pendingInfo = `\n\n---\n\n${pendingMarker}`;
                   fullResponse += pendingInfo;
                   onChunk?.(pendingInfo);
                   console.log('[DEBUG] Transaction is async_pending, starting transaction stream for task:', taskId);
@@ -369,10 +370,20 @@ export class KognysStreamChatTransport {
                     {
                       onTransactionHash: (hash) => {
                         console.log('[DEBUG] Received transaction hash from stream:', hash);
-                        // Update the response with the actual hash
-                        const txUpdateInfo = `\n\n✅ **Transaction confirmed:** [\`${hash}\`](https://testnet.bscscan.com/tx/${hash})`;
-                        fullResponse += txUpdateInfo;
-                        onChunk?.(txUpdateInfo);
+                        // Replace the pending message with the actual hash
+                        const txConfirmedInfo = `✅ **Transaction confirmed:** [\`${hash}\`](https://testnet.bscscan.com/tx/${hash})`;
+
+                        // Replace in the fullResponse
+                        const pendingIndex = fullResponse.lastIndexOf(pendingMarker);
+                        if (pendingIndex !== -1) {
+                          fullResponse = fullResponse.substring(0, pendingIndex) + txConfirmedInfo;
+                        } else {
+                          // Fallback: just append if we can't find the marker
+                          fullResponse += `\n\n${txConfirmedInfo}`;
+                        }
+
+                        // Send a special update event to replace the pending message
+                        onChunk?.(`\n[TX_UPDATE:${hash}]`);
                         this.currentTransactionHash = hash;
                         // Stop the transaction stream
                         txAbortController.abort();
