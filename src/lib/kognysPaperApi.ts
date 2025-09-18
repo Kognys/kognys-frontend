@@ -201,6 +201,101 @@ export class KognysPaperApi {
   }
 
   /**
+   * Stream transaction updates for a specific task
+   */
+  async streamTransaction(
+    taskId: string,
+    callbacks: {
+      onTransactionHash?: (hash: string) => void;
+      onEvent?: (event: SSEEvent) => void;
+      onError?: (error: Error) => void;
+      onComplete?: () => void;
+    },
+    signal?: AbortSignal
+  ): Promise<void> {
+    console.log('[DEBUG] Starting transaction stream for task:', taskId);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/transactions/stream?task_id=${taskId}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+        },
+        signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Response body is not readable');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          callbacks.onComplete?.();
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (trimmedLine && trimmedLine.startsWith('data: ')) {
+            const event = parseSSELine(trimmedLine);
+            if (event) {
+              console.log('[DEBUG] Transaction stream event:', event);
+              callbacks.onEvent?.(event);
+
+              // Check if event contains transaction hash
+              if (event.data) {
+                // Look for transaction hash in various possible fields (using any type for flexibility)
+                const data = event.data as any;
+                const hash = data.transaction_hash ||
+                           data.txn_hash ||
+                           data.tx_hash ||
+                           data.hash ||
+                           data.finish_task_txn_hash;
+
+                if (hash && hash !== 'async_pending') {
+                  console.log('[DEBUG] Found transaction hash in stream:', hash);
+                  callbacks.onTransactionHash?.(hash);
+                }
+
+                // Also check if message contains transaction info
+                if (data.message && typeof data.message === 'string') {
+                  const txMatch = data.message.match(/(?:0x)?[a-fA-F0-9]{64}/);
+                  if (txMatch) {
+                    const extractedHash = txMatch[0].startsWith('0x') ? txMatch[0] : `0x${txMatch[0]}`;
+                    console.log('[DEBUG] Extracted transaction hash from message:', extractedHash);
+                    callbacks.onTransactionHash?.(extractedHash);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('💥 Transaction Stream Error:', error);
+      callbacks.onError?.(error instanceof Error ? error : new Error('Transaction stream failed'));
+      throw error;
+    }
+  }
+
+  /**
    * Alternative streaming implementation using fetch for POST requests
    */
   async createPaperStreamPost(

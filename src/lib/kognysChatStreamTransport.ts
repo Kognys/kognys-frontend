@@ -24,6 +24,7 @@ interface KognysStreamOptions {
 export class KognysStreamChatTransport {
   private currentPaperId: string | null = null;
   private currentTransactionHash: string | null = null;
+  private currentTaskId: string | null = null;
   private maxRetries = 3;
   private retryDelay = 1000; // Start with 1 second
   private accumulatedChallengerCriticisms: string[] = [];
@@ -339,13 +340,14 @@ export class KognysStreamChatTransport {
                 const verifiableData = event.data.verifiable_data;
                 this.currentTransactionHash = verifiableData?.finish_task_txn_hash || null;
                 console.log('[DEBUG] Extracted transaction hash:', this.currentTransactionHash);
-                
+
                 // Check if there's a task_id we can use
                 const taskId = event.data.task_id || verifiableData?.task_id;
                 if (taskId) {
                   console.log('[DEBUG] Found task_id:', taskId);
+                  this.currentTaskId = taskId;
                 }
-                
+
                 // If we have a real transaction hash (not async_pending), add it to the response
                 if (this.currentTransactionHash && this.currentTransactionHash !== 'async_pending') {
                   // Add transaction information to the response
@@ -353,12 +355,45 @@ export class KognysStreamChatTransport {
                   fullResponse += transactionInfo;
                   onChunk?.(transactionInfo);
                   console.log('[DEBUG] Added transaction to response:', this.currentTransactionHash);
-                } else if (this.currentTransactionHash === 'async_pending') {
-                  // Transaction is pending - add a placeholder that we'll update later
+                } else if (this.currentTransactionHash === 'async_pending' && taskId) {
+                  // Transaction is pending - start polling for the actual hash
                   const pendingInfo = `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...`;
                   fullResponse += pendingInfo;
                   onChunk?.(pendingInfo);
-                  console.log('[DEBUG] Transaction is async_pending, added placeholder');
+                  console.log('[DEBUG] Transaction is async_pending, starting transaction stream for task:', taskId);
+
+                  // Start transaction stream to get the actual hash
+                  const txAbortController = new AbortController();
+                  kognysPaperApi.streamTransaction(
+                    taskId,
+                    {
+                      onTransactionHash: (hash) => {
+                        console.log('[DEBUG] Received transaction hash from stream:', hash);
+                        // Update the response with the actual hash
+                        const txUpdateInfo = `\n\n✅ **Transaction confirmed:** [\`${hash}\`](https://testnet.bscscan.com/tx/${hash})`;
+                        fullResponse += txUpdateInfo;
+                        onChunk?.(txUpdateInfo);
+                        this.currentTransactionHash = hash;
+                        // Stop the transaction stream
+                        txAbortController.abort();
+                      },
+                      onError: (error) => {
+                        console.error('[DEBUG] Transaction stream error:', error);
+                      },
+                      onComplete: () => {
+                        console.log('[DEBUG] Transaction stream completed');
+                      }
+                    },
+                    txAbortController.signal
+                  ).catch(error => {
+                    console.error('[DEBUG] Failed to start transaction stream:', error);
+                  });
+                } else if (this.currentTransactionHash === 'async_pending') {
+                  // No task_id available, just show pending message
+                  const pendingInfo = `\n\n---\n\n⏳ **Transaction Status:** Processing on blockchain...`;
+                  fullResponse += pendingInfo;
+                  onChunk?.(pendingInfo);
+                  console.log('[DEBUG] Transaction is async_pending but no task_id available');
                 }
                 
                 // Store transaction hash in localStorage for persistence
